@@ -4,27 +4,12 @@
 #include "pros/rtos.hpp"
 #include <cstdio>
 
-// NOTE: kernel 4.x bundles LVGL v9, whose API renamed several v8 functions
-// (lv_img_* -> lv_image_*, lv_btn_* -> lv_button_*, lv_scr_act -> lv_screen_active,
-// lv_obj_clear_flag -> lv_obj_remove_flag, LV_IMG_DECLARE -> LV_IMAGE_DECLARE).
-// This file targets v9. If you're ever on an older kernel with LVGL v8, swap
-// those names back.
-
 namespace gui {
 
-// Optional real logo, set via gui::setLogoImage() before gui::init().
-// Until you set one, the Home tab draws a plain placeholder box instead -
-// this avoids hand-writing a raw lv_image_dsc_t, which is easy to get wrong
-// and differs between LVGL versions. See README for how to generate a real
-// one with the LVGL image converter (pick "LVGL v9" as the output version).
+//Logo
 static const lv_image_dsc_t* g_logo_dsc = nullptr;
 void setLogoImage(const void* img_dsc) { g_logo_dsc = static_cast<const lv_image_dsc_t*>(img_dsc); }
 
-// ---------------------------------------------------------------------
-// EDIT THIS: your autonomous routines. Add/remove entries freely.
-// The lambdas here are placeholders - point them at your real functions,
-// e.g. { "Left AWP", left_awp_auton }
-// ---------------------------------------------------------------------
 static std::vector<AutonRoutine> g_routines = {
     {"Left WP",   []() { printf("Running: Left WP\n"); }},
     {"Right WP",  []() { printf("Running: Right WP\n"); }},
@@ -68,7 +53,7 @@ static void init_styles() {
     lv_style_set_pad_all(&style_card, 6);
 }
 
-// ---- Home tab -----------------------------------------------------------
+//  Home tab 
 static lv_obj_t* lbl_status;
 static lv_obj_t* lbl_battery;
 
@@ -106,7 +91,7 @@ static void build_home_tab(lv_obj_t* tab) {
     lv_obj_align(build, LV_ALIGN_BOTTOM_LEFT, 5, -5);
 }
 
-// ---- Autonomous tab -------------------------------------------------
+//  Autonomous tab 
 static void auton_btn_event_cb(lv_event_t* e) {
     if (g_locked) return;  // ignore taps once match has started
     int idx = (int)(intptr_t)lv_event_get_user_data(e);
@@ -146,7 +131,7 @@ static void build_auton_tab(lv_obj_t* tab) {
     lv_obj_set_style_text_color(lbl_selected_display, lv_color_hex(0xff5050), 0);
 }
 
-// ---- Motors tab -------------------------------------------------------
+//  Motors tab 
 static std::vector<lv_obj_t*> g_motor_rows;   // container per motor
 static std::vector<lv_obj_t*> g_motor_labels; // text label per motor
 
@@ -181,7 +166,7 @@ static lv_color_t temp_color(double c) {
     return lv_color_hex(0x30d158);                // green - fine
 }
 
-// ---- background telemetry task ----------------------------------------
+//  background telemetry task 
 static void telemetry_task() {
     while (true) {
         // battery + connection status
@@ -230,7 +215,7 @@ static void telemetry_task() {
     }
 }
 
-// ---------------------------------------------------------------------
+// initialization
 void init() {
     init_styles();
 
