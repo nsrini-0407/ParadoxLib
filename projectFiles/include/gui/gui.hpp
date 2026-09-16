@@ -7,7 +7,7 @@
 
 namespace gui {
 
-// Add one entry per autonomous routine you have. `name` shows on the button,
+//  name` shows on the button
 // `run` is the function that gets called if this routine is selected.
 struct AutonRoutine {
     std::string name;
@@ -20,7 +20,7 @@ void runSelectedAuton();
 int getSelectedAutonIndex();
 std::string getSelectedAutonName();
 
-// A motor to display on the "Motors" tab, with a friendly label.
+// A motor to display on the "Motors" tab, with a label.
 struct WatchedMotor {
     std::string label;      // e.g. "L Front"
     pros::Motor* motor;     // pointer to your existing motor object
