@@ -31,7 +31,7 @@ void runSelectedAuton() {
 }
 void setWatchedMotors(const std::vector<WatchedMotor>& motors) { g_motors = motors; }
 
-// ---- styling helpers ---------------------------------------------------
+//  styling helpers 
 static lv_style_t style_btn_default, style_btn_selected, style_card;
 
 static void init_styles() {
@@ -93,12 +93,23 @@ static void build_home_tab(lv_obj_t* tab) {
 
 //  Autonomous tab 
 static void auton_btn_event_cb(lv_event_t* e) {
-    if (g_locked) return;  // ignore taps once match has started
+    if (g_locked) return;
+
     int idx = (int)(intptr_t)lv_event_get_user_data(e);
     g_selected = idx;
+
     for (size_t i = 0; i < g_auton_btns.size(); i++) {
-        lv_obj_remove_style(g_auton_btns[i], nullptr, LV_STATE_DEFAULT);
-        lv_obj_add_style(g_auton_btns[i], (int)i == idx ? &style_btn_selected : &style_btn_default, 0);
+        lv_obj_t* btn = g_auton_btns[i];
+
+        // Remove only OUR color styles—keep the button's size and position.
+        lv_obj_remove_style(btn, &style_btn_default, LV_PART_MAIN);
+        lv_obj_remove_style(btn, &style_btn_selected, LV_PART_MAIN);
+
+        lv_obj_add_style(
+            btn,
+            (int)i == idx ? &style_btn_selected : &style_btn_default,
+            LV_PART_MAIN
+        );
     }
 }
 
@@ -181,9 +192,8 @@ static void telemetry_task() {
 
         // once the field/competition switch flips out of disabled the FIRST
         // time, lock the auton selector so nobody can bump it mid-match
-        static bool ever_enabled = false;
-        if (!pros::competition::is_disabled()) ever_enabled = true;
-        g_locked = ever_enabled;
+        // Selectable whenever the robot is disabled; locked only while enabled.
+        g_locked = !pros::competition::is_disabled();
 
         // update selected-auton readout
         char sel[48];
