@@ -1,9 +1,8 @@
 #include "main.h"
-	
 #include "pros/motors.hpp"
 #include "liblvgl/lvgl.h"
 
-LV_IMAGE_DECLARE(logo_map);  // matches whatever name the converter used
+LV_IMAGE_DECLARE(logo);  // matches whatever name the converter used
 
 
 
@@ -19,6 +18,18 @@ TrackingWheel backWheel(&backRotation, 2.75, 1.0); // 2.75 inch diameter, 1:1 ge
 IMU imu(4); // IMU sensor on port 4
 
 Odom odom(&leftWheel, &rightWheel, &backWheel, &imu, 11.5, 4.0); // 11.5 inch track width, 4 inch back wheel offset
+
+static gui::OdomDebugData get_odom_debug_data() {
+	const Pose pose = odom.getPose();
+	return {pose.x, pose.y, pose.theta};
+}
+
+static void odom_task() {
+	while (true) {
+		odom.update();
+		pros::delay(10);
+	}
+}
 
 pros::Motor leftFrontMotor(12);
 pros::Motor leftBackMotor(13);
@@ -48,7 +59,6 @@ void on_center_button() {
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-	gui::setLogoImage(&logo_map);
 	pros::lcd::initialize();
 	pros::lcd::set_text(1, "Hello PROS User!");
 
@@ -62,7 +72,23 @@ void initialize() {
         // add every motor you'd want warning on for a hotswap
     });
 
-    gui::init();
+	gui::setLogoImage(&logo);
+	gui::setOdomDebugProvider(get_odom_debug_data);
+	gui::init();  // Screen appears immediately
+
+	imu.calibrate();
+	leftWheel.reset();
+	rightWheel.reset();
+	backWheel.reset();
+
+	leftWheel.recordPosition();
+	rightWheel.recordPosition();
+	backWheel.recordPosition();
+
+odom.setPose(0.0, 0.0, 0.0);
+
+	
+	pros::Task(odom_task, "odom");
 }
 
 

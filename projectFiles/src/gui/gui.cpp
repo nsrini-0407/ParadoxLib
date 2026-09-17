@@ -9,6 +9,8 @@ namespace gui {
 //Logo
 static const lv_image_dsc_t* g_logo_dsc = nullptr;
 void setLogoImage(const void* img_dsc) { g_logo_dsc = static_cast<const lv_image_dsc_t*>(img_dsc); }
+static OdomDebugProvider g_odom_debug_provider = nullptr;
+void setOdomDebugProvider(OdomDebugProvider provider) { g_odom_debug_provider = provider; }
 
 static std::vector<AutonRoutine> g_routines = {
     {"Left WP",   []() { printf("Running: Left WP\n"); }},
@@ -56,12 +58,14 @@ static void init_styles() {
 //  Home tab 
 static lv_obj_t* lbl_status;
 static lv_obj_t* lbl_battery;
+static lv_obj_t* lbl_odom;
 
 static void build_home_tab(lv_obj_t* tab) {
     if (g_logo_dsc) {
         lv_obj_t* img = lv_image_create(tab);
         lv_image_set_src(img, g_logo_dsc);
-        lv_obj_align(img, LV_ALIGN_TOP_LEFT, 5, 5);
+        lv_image_set_scale(img, 128);  // 128 = 50%; 256 = normal/full size
+        lv_obj_align(img, LV_ALIGN_CENTER, -80, 0);
     } else {
         lv_obj_t* placeholder = lv_obj_create(tab);
         lv_obj_add_style(placeholder, &style_card, 0);
@@ -85,10 +89,9 @@ static void build_home_tab(lv_obj_t* tab) {
     lv_label_set_text(lbl_battery, "Battery: --%");
     lv_obj_align(lbl_battery, LV_ALIGN_TOP_RIGHT, -10, 70);
 
-    lv_obj_t* build = lv_label_create(tab);
-    lv_label_set_text_fmt(build, "Build: %s %s", __DATE__, __TIME__);
-    lv_obj_set_style_text_color(build, lv_color_hex(0x888888), 0);
-    lv_obj_align(build, LV_ALIGN_BOTTOM_LEFT, 5, -5);
+    lbl_odom = lv_label_create(tab);
+    lv_label_set_text(lbl_odom, "ODOM\nX: -- in\nY: -- in\nH: -- deg");
+    lv_obj_align(lbl_odom, LV_ALIGN_TOP_RIGHT, -10, 100);
 }
 
 //  Autonomous tab 
@@ -169,6 +172,8 @@ static void build_motors_tab(lv_obj_t* tab) {
     }
 }
 
+
+
 // Color thresholds - VEX motors start throttling around 55C and the
 // cartridge/motor is generally considered "hot" near the 60-65C mark.
 static lv_color_t temp_color(double c) {
@@ -189,6 +194,15 @@ static void telemetry_task() {
                               : pros::competition::is_autonomous() ? "Status: Autonomous"
                                                                      : "Status: Driver Control";
         lv_label_set_text(lbl_status, status);
+
+        if (g_odom_debug_provider && lbl_odom) {
+            const OdomDebugData pose = g_odom_debug_provider();
+            char odom_text[80];
+            snprintf(odom_text, sizeof(odom_text),
+                     "ODOM\nX: %.1f in\nY: %.1f in\nH: %.1f deg",
+                     pose.x, pose.y, pose.heading);
+            lv_label_set_text(lbl_odom, odom_text);
+        }
 
         // once the field/competition switch flips out of disabled the FIRST
         // time, lock the auton selector so nobody can bump it mid-match
@@ -221,7 +235,7 @@ static void telemetry_task() {
             lv_label_set_text(g_motor_labels[i], line);
         }
 
-        pros::delay(200);
+        pros::delay(50);
     }
 }
 
@@ -236,6 +250,19 @@ void init() {
     lv_obj_t* tab_home   = lv_tabview_add_tab(tabview, "Home");
     lv_obj_t* tab_auton  = lv_tabview_add_tab(tabview, "Autonomous");
     lv_obj_t* tab_motors = lv_tabview_add_tab(tabview, "Motors");
+
+    // Keep each page fixed; switch pages only by tapping the tab names.
+    lv_obj_t* content = lv_tabview_get_content(tabview);
+    lv_obj_remove_flag(content, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scroll_dir(content, LV_DIR_NONE);
+
+    lv_obj_remove_flag(tab_home, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(tab_auton, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_remove_flag(tab_motors, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_set_scrollbar_mode(tab_home, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_scrollbar_mode(tab_auton, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_scrollbar_mode(tab_motors, LV_SCROLLBAR_MODE_OFF);
 
     build_home_tab(tab_home);
     build_auton_tab(tab_auton);

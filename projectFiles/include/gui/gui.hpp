@@ -31,6 +31,17 @@ void setWatchedMotors(const std::vector<WatchedMotor>& motors);
 
 void setLogoImage(const void* img_dsc);
 
+// Supplies the Home tab with the robot's current field pose without making the
+// GUI depend directly on the odometry implementation.
+struct OdomDebugData {
+    double x;
+    double y;
+    double heading;
+};
+
+using OdomDebugProvider = OdomDebugData (*)();
+void setOdomDebugProvider(OdomDebugProvider provider);
+
 void init();
 
 }  // namespace gui
