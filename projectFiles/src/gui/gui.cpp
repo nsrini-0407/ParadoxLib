@@ -64,7 +64,10 @@ static void build_home_tab(lv_obj_t* tab) {
     if (g_logo_dsc) {
         lv_obj_t* img = lv_image_create(tab);
         lv_image_set_src(img, g_logo_dsc);
-        lv_image_set_scale(img, 128);  // 128 = 50%; 256 = normal/full size
+        // No lv_image_set_scale: the asset is now stored at its display size
+        // (150x190). It used to be a 299x380 RGB565 bitmap drawn at 50%, which
+        // meant 4x the pixels of anything that reached the screen - 227KB of a
+        // 239KB hot image - and a rescale of 113,620 px on every redraw.
         lv_obj_align(img, LV_ALIGN_CENTER, -80, 0);
     } else {
         lv_obj_t* placeholder = lv_obj_create(tab);
@@ -182,60 +185,65 @@ static lv_color_t temp_color(double c) {
     return lv_color_hex(0x30d158);                // green - fine
 }
 
-//  background telemetry task 
-static void telemetry_task() {
-    while (true) {
-        // battery + connection status
-        char buf[32];
-        snprintf(buf, sizeof(buf), "Battery: %d%%", (int)pros::battery::get_capacity());
-        lv_label_set_text(lbl_battery, buf);
+//  telemetry refresh
+//
+// Runs as an lv_timer, NOT a pros::Task. LVGL 9 is built here with
+// LV_USE_OS == LV_OS_NONE (no lv_conf.h override), so it has no internal
+// locking and lv_lock()/lv_unlock() do not exist. PROS's liblvgl daemon calls
+// lv_timer_handler() on its own task, so touching lv_* from a separate PROS
+// task races that daemon on LVGL's object and invalidation state - which shows
+// up as the readouts freezing or the display stalling. lv_timer callbacks are
+// dispatched *by* lv_timer_handler, i.e. on the daemon task itself, so there is
+// no cross-task LVGL access at all.
+static void telemetry_timer_cb(lv_timer_t*) {
+    // battery + connection status
+    char buf[32];
+    snprintf(buf, sizeof(buf), "Battery: %d%%", (int)pros::battery::get_capacity());
+    lv_label_set_text(lbl_battery, buf);
 
-        const char* status = pros::competition::is_disabled()   ? "Status: Disabled"
-                              : pros::competition::is_autonomous() ? "Status: Autonomous"
-                                                                     : "Status: Driver Control";
-        lv_label_set_text(lbl_status, status);
+    const char* status = pros::competition::is_disabled()   ? "Status: Disabled"
+                          : pros::competition::is_autonomous() ? "Status: Autonomous"
+                                                                 : "Status: Driver Control";
+    lv_label_set_text(lbl_status, status);
 
-        if (g_odom_debug_provider && lbl_odom) {
-            const OdomDebugData pose = g_odom_debug_provider();
-            char odom_text[80];
-            snprintf(odom_text, sizeof(odom_text),
-                     "ODOM\nX: %.1f in\nY: %.1f in\nH: %.1f deg",
-                     pose.x, pose.y, pose.heading);
-            lv_label_set_text(lbl_odom, odom_text);
+    if (g_odom_debug_provider && lbl_odom) {
+        const OdomDebugData pose = g_odom_debug_provider();
+        char odom_text[80];
+        snprintf(odom_text, sizeof(odom_text),
+                 "ODOM\nX: %.2f in\nY: %.2f in\nH: %.2f deg",
+                 pose.x, pose.y, pose.heading);
+        lv_label_set_text(lbl_odom, odom_text);
+    }
+
+    // once the field/competition switch flips out of disabled the FIRST
+    // time, lock the auton selector so nobody can bump it mid-match
+    // Selectable whenever the robot is disabled; locked only while enabled.
+    g_locked = !pros::competition::is_disabled();
+
+    // update selected-auton readout
+    char sel[48];
+    snprintf(sel, sizeof(sel), "Selected: %s%s", getSelectedAutonName().c_str(), g_locked ? " (LOCKED)" : "");
+    lv_label_set_text(lbl_selected_display, sel);
+    lv_obj_set_style_text_color(lbl_selected_display, g_selected >= 0 ? lv_color_hex(0x30d158) : lv_color_hex(0xff5050), 0);
+
+    // update each watched motor row
+    for (size_t i = 0; i < g_motors.size(); i++) {
+        pros::Motor* m = g_motors[i].motor;
+        double temp = m->get_temperature();
+        double cur = m->get_current_draw() / 1000.0;  // mA -> A
+        bool connected = m->is_installed();
+
+        char line[64];
+        if (!connected) {
+            snprintf(line, sizeof(line), "%-10s DISCONNECTED", g_motors[i].label.c_str());
+            lv_obj_set_style_text_color(g_motor_labels[i], lv_color_hex(0xff3b30), 0);
+        } else {
+            snprintf(line, sizeof(line), "%-10s %5.1fC   %4.1fA", g_motors[i].label.c_str(), temp, cur);
+            lv_obj_set_style_text_color(g_motor_labels[i], lv_color_white(), 0);
+            lv_obj_set_style_bg_color(g_motor_rows[i], temp_color(temp), 0);
+            lv_obj_set_style_bg_opa(g_motor_rows[i], LV_OPA_30, 0);
         }
-
-        // once the field/competition switch flips out of disabled the FIRST
-        // time, lock the auton selector so nobody can bump it mid-match
-        // Selectable whenever the robot is disabled; locked only while enabled.
-        g_locked = !pros::competition::is_disabled();
-
-        // update selected-auton readout
-        char sel[48];
-        snprintf(sel, sizeof(sel), "Selected: %s%s", getSelectedAutonName().c_str(), g_locked ? " (LOCKED)" : "");
-        lv_label_set_text(lbl_selected_display, sel);
-        lv_obj_set_style_text_color(lbl_selected_display, g_selected >= 0 ? lv_color_hex(0x30d158) : lv_color_hex(0xff5050), 0);
-
-        // update each watched motor row
-        for (size_t i = 0; i < g_motors.size(); i++) {
-            pros::Motor* m = g_motors[i].motor;
-            double temp = m->get_temperature();
-            double cur = m->get_current_draw() / 1000.0;  // mA -> A
-            bool connected = m->is_installed();
-
-            char line[64];
-            if (!connected) {
-                snprintf(line, sizeof(line), "%-10s DISCONNECTED", g_motors[i].label.c_str());
-                lv_obj_set_style_text_color(g_motor_labels[i], lv_color_hex(0xff3b30), 0);
-            } else {
-                snprintf(line, sizeof(line), "%-10s %5.1fC   %4.1fA", g_motors[i].label.c_str(), temp, cur);
-                lv_obj_set_style_text_color(g_motor_labels[i], lv_color_white(), 0);
-                lv_obj_set_style_bg_color(g_motor_rows[i], temp_color(temp), 0);
-                lv_obj_set_style_bg_opa(g_motor_rows[i], LV_OPA_30, 0);
-            }
-            lv_label_set_text(g_motor_labels[i], line);
-        }
-
-        pros::delay(50);
+        lv_label_set_text(g_motor_labels[i], line);
     }
 }
 
@@ -268,7 +276,7 @@ void init() {
     build_auton_tab(tab_auton);
     build_motors_tab(tab_motors);
 
-    pros::Task(telemetry_task, "gui_telemetry");
+    lv_timer_create(telemetry_timer_cb, 50, nullptr);
 }
 
 }  // namespace gui

@@ -14,4 +14,8 @@ compile_commands.json
 temp.log
 temp.errors
 *.ini
+.d/.DS_Store
+
+# dependency files + macOS junk
 .d/
+.DS_Store

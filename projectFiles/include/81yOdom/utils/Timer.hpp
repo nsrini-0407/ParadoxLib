@@ -1,24 +1,20 @@
 #pragma once
 #include "pros/rtos.hpp"
+#include <cstdint>
 
-class Timer{
+class Timer {
     public:
         explicit Timer(double timeoutMs) 
         : startTime(pros::millis()), timeout(timeoutMs) {}
 
-        bool isDone() const {
-            return pros::millis() - startTime >= timeout;
-        }
+        bool isDone() const { return getElapsed() >= timeout; }
 
-        double getElapsed() const {
-            return pros::millis() - startTime;
-        }
+        // ms since construction / last reset
+        double getElapsed() const { return (double)(pros::millis() - startTime); }
 
-        void reset() {
-            startTime = pros::millis();
-        }
+        void reset() { startTime = pros::millis(); }
 
-        private:
-            uint32_t startTime;
-            double timeout;
-    };
+    private:
+        uint32_t startTime;
+        double timeout;
+};
