@@ -2,7 +2,6 @@
 #include <cmath>
 #include <algorithm>
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Library-wide conventions. Every file in 81yOdom assumes these.
 //
 //   Distance   inches
@@ -13,7 +12,6 @@
 //              with the V5 IMU, which reports clockwise-positive natively.
 //   Time       milliseconds for API arguments, seconds inside math
 //   Output     percent, -100..100. 100 = 12000 mV.
-// ─────────────────────────────────────────────────────────────────────────────
 
 constexpr double PI = 3.14159265358979;
 

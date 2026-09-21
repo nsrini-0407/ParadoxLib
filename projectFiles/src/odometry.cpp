@@ -3,21 +3,6 @@
 #include "pros/rtos.hpp"
 #include <cmath>
 
-// ─── Geometry, clockwise-positive heading ────────────────────────────────────
-//
-// Under a small rotation dθ (rad, CW) about the tracking center, a point of the
-// robot moves perpendicular to its radius:
-//
-//   VERTICAL wheel at lateral offset xo (+right):
-//     a point right of center moves BACKWARD under CW rotation, so the wheel
-//     reads  dV = dY - xo*dθ      =>   dY = dV + xo*dθ
-//
-//   HORIZONTAL wheel at forward offset yo (+ahead):
-//     a point ahead of center moves RIGHT under CW rotation, so the wheel
-//     reads  dH = dX + yo*dθ      =>   dX = dH - yo*dθ
-//
-// Two vertical wheels also give dθ directly:  dL - dR = (xR - xL)*dθ.
-// That is the fallback when the IMU is absent or faulted.
 
 void Odom::setPose(Pose p) {
     if (s.imu) s.imu->setRotation(p.theta);
@@ -52,7 +37,7 @@ double Odom::getLinearVelocity()  const { ScopedLock l(mutex); return linVel; }
 double Odom::getAngularVelocity() const { ScopedLock l(mutex); return angVel; }
 
 void Odom::update() {
-    // ── Sample every sensor once, as close together as possible ─────────────
+    //  Sample every sensor once, as close together as possible 
     const double dV1 = s.vertical1   ? s.vertical1->update()   : 0.0;
     const double dV2 = s.vertical2   ? s.vertical2->update()   : 0.0;
     const double dH1 = s.horizontal1 ? s.horizontal1->update() : 0.0;
@@ -69,7 +54,7 @@ void Odom::update() {
     const bool h1ok = s.horizontal1 && !s.horizontal1->isFaulted();
     const bool h2ok = s.horizontal2 && !s.horizontal2->isFaulted();
 
-    // ── Heading change ──────────────────────────────────────────────────────
+    //  Heading change 
     double dThetaDeg = 0.0;
     if (std::isfinite(imuRot)) {
         if (havePrevRotation) dThetaDeg = imuRot - prevRotation;
@@ -88,19 +73,19 @@ void Odom::update() {
 
     const double dTheta = toRad(dThetaDeg);
 
-    // ── Forward displacement of the tracking center ─────────────────────────
+    //  Forward displacement of the tracking center
     double dY = 0.0; int nV = 0;
     if (v1ok) { dY += dV1 + s.vertical1->getOffset() * dTheta; nV++; }
     if (v2ok) { dY += dV2 + s.vertical2->getOffset() * dTheta; nV++; }
     if (nV) dY /= nV;
 
-    // ── Lateral displacement of the tracking center ─────────────────────────
+    // Lateral displacement of the tracking center 
     double dX = 0.0; int nH = 0;
     if (h1ok) { dX += dH1 - s.horizontal1->getOffset() * dTheta; nH++; }
     if (h2ok) { dX += dH2 - s.horizontal2->getOffset() * dTheta; nH++; }
     if (nH) dX /= nH;
 
-    // ── Arc -> chord, then rotate into the field frame ──────────────────────
+    //  Arc -> chord, then rotate into the field frame 
     // The wheels measured arc lengths. The straight-line displacement over the
     // cycle is the chord, 2*R*sin(dθ/2), and it points along the heading the
     // robot held at the MIDPOINT of the arc. The same scale applies to both

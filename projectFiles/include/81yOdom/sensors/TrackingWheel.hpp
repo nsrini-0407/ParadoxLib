@@ -9,21 +9,7 @@
 // A wheel whose rotation is measured to track ground travel. Either a dedicated
 // unpowered tracking wheel on a V5 Rotation sensor, or - as a fallback when you
 // have none - the drive motors' own encoders.
-//
-// ── offset ───────────────────────────────────────────────────────────────────
-// Signed distance in inches from the robot's tracking center to the wheel's
-// contact line, measured PERPENDICULAR to the wheel's rolling direction:
-//
-//   VERTICAL wheel (rolls forward/back):   + = right of center,  - = left
-//   HORIZONTAL wheel (rolls side to side): + = ahead of center,  - = behind
-//
-// You do not have to get this right by hand. Chassis::measureTrackingOffsets()
-// computes it from a spin test - see the tuning routines.
-//
-// ── gearRatio ────────────────────────────────────────────────────────────────
-// Wheel revolutions per sensor revolution. 1.0 when the sensor is on the wheel
-// axle. For drive encoders with external gearing, driven-teeth / driving-teeth
-// as seen from the motor.
+
 class TrackingWheel {
 public:
     // Dedicated tracking wheel on a Rotation sensor.

@@ -32,7 +32,7 @@ const char* nm(int i) {
 
 } // namespace
 
-// ─── 1. Wheel directions ─────────────────────────────────────────────────────
+//  1. Wheel directions 
 
 void Chassis::checkWheelDirections(pros::Controller& c) {
     banner("CHECK WHEEL DIRECTIONS");
@@ -68,7 +68,7 @@ void Chassis::checkWheelDirections(pros::Controller& c) {
     c.set_text(0, 0, allOk ? "Dirs OK        " : "FIX reversed   ");
 }
 
-// ─── 2. Wheel diameter ───────────────────────────────────────────────────────
+//  2. Wheel diameter ───────────────────────────────────────────────────────
 
 void Chassis::measureWheelDiameter(pros::Controller& c, double actualInches) {
     banner("MEASURE WHEEL DIAMETER");
@@ -96,7 +96,7 @@ void Chassis::measureWheelDiameter(pros::Controller& c, double actualInches) {
     printf("  Paste the corrected diameters into your TrackingWheel constructors.\n");
 }
 
-// ─── 3. Tracking wheel offsets ───────────────────────────────────────────────
+//  3. Tracking wheel offsets 
 //
 // Spin in place. A wheel at offset o from the center of rotation rolls o*θ:
 //   vertical   dV = -xo*θ   =>  xo = -dV/θ
@@ -169,7 +169,7 @@ void Chassis::measureTrackingOffsets(pros::Controller& c, double degrees) {
     c.set_text(0, 0, "Offsets done   ");
 }
 
-// ─── 4. IMU scalar ───────────────────────────────────────────────────────────
+//  4. IMU scalar 
 
 void Chassis::measureImuScalar(pros::Controller& c, int turns) {
     banner("MEASURE IMU SCALAR");
@@ -195,7 +195,7 @@ void Chassis::measureImuScalar(pros::Controller& c, int turns) {
     c.set_text(0, 0, "Scalar done    ");
 }
 
-// ─── 5. Drive balance ────────────────────────────────────────────────────────
+//  5. Drive balance 
 
 void Chassis::tuneDriveBalance(int ms, double percent) {
     banner("DRIVE BALANCE (open loop, equal voltage both sides)");

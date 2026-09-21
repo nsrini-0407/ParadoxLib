@@ -3,7 +3,7 @@
 #include "81yOdom/utils/math.hpp"
 #include <cmath>
 
-// ─── Shared helpers ──────────────────────────────────────────────────────────
+//  Shared helpers 
 
 namespace {
 
@@ -32,7 +32,6 @@ double curvatureTo(const Pose& pose, double ox, double oy) {
 
 } // namespace
 
-// ─── turnToHeading ───────────────────────────────────────────────────────────
 
 void Chassis::turnToHeading(double theta, double timeoutMs, TurnToHeadingParams p) {
     requestMotionStart(p.async, [=, this] {
@@ -78,7 +77,7 @@ void Chassis::turnToHeading(double theta, double timeoutMs, TurnToHeadingParams 
     });
 }
 
-// ─── moveToPoint ─────────────────────────────────────────────────────────────
+//  moveToPoint 
 
 void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParams p) {
     requestMotionStart(p.async, [=, this] {
@@ -91,6 +90,7 @@ void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParam
         Pose lastPose = odom.getPose();
         double prevLateral = 0.0, prevAngular = 0.0;
         double maxSpeed = p.maxSpeed;
+        double closeBearing = 0.0;
         bool close = false, earlyExit = false;
 
         while (!cancelled() && pros::millis() - start < (uint32_t)timeoutMs) {
@@ -102,43 +102,34 @@ void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParam
 
             const double d = pose.distanceTo(x, y);
 
-            // Aim the front (or, reversed, the back) at the target. The robot's
-            // OWN heading is what gets subtracted - not a flipped copy of the
-            // target, which cancels to a constant 180.
             double targetHeading = pose.angleTo(x, y);
             if (!p.forwards) targetHeading = normalizeAngle(targetHeading + 180.0);
-            const double angularError = pose.headingError(targetHeading);
 
-            // Remaining distance projected onto the robot's forward axis.
-            double lateralError = d * std::cos(toRad(angularError));
-            if (!p.forwards) lateralError = -lateralError;
-
-            // Inside CLOSE_RANGE the target bearing swings wildly for tiny
-            // position errors (atan2 of a short vector), so stop steering and
-            // lock the speed ceiling at whatever we were doing so the PID can
-            // only decelerate from here, never re-accelerate into the target.
             if (!close && d < CLOSE_RANGE_IN) {
                 close = true;
+                closeBearing = targetHeading;
                 maxSpeed = std::max(std::fabs(prevLateral), 30.0);
             }
 
-            if (close && (small.update(lateralError) || large.update(lateralError))) break;
+            const double angularError = pose.headingError(close ? closeBearing : targetHeading);
+
+            double lateralError = d * std::cos(toRad(angularError));
+            if (!p.forwards) lateralError = -lateralError;
+
+            if (close && d < lateralSettings.largeError * 1.5) {
+                if (small.update(lateralError) || large.update(lateralError)) break;
+            }
             if (p.earlyExitRange > 0 && d < p.earlyExitRange) { earlyExit = true; break; }
             if (stalled(pros::millis() - start, d, lateralSettings.largeError)) break;
 
             double lateralRaw = lateralPID.update(lateralError, dt);
-            double angularOut = close ? 0.0 : angularPID.update(angularError, dt);
+            double angularOut = angularPID.update(angularError, dt);
 
             lateralRaw = clamp(lateralRaw, -maxSpeed, maxSpeed);
             angularOut = clamp(angularOut, -maxSpeed, maxSpeed);
 
-            // Facing away from the target (|angularError| > 90) the projection
-            // goes negative and P would drive us backward, away from it. Turn
-            // first; only drive in the commanded direction.
             if (!close) lateralRaw = p.forwards ? std::max(lateralRaw, 0.0) : std::min(lateralRaw, 0.0);
 
-            // Chaining floor. Applied before the slew, or the floor jumps the
-            // output straight to minSpeed on loop 0 and the slew is a no-op.
             if ((!close || p.earlyExitRange > 0) && std::fabs(lateralRaw) < p.minSpeed) {
                 lateralRaw = p.minSpeed * (p.forwards ? 1.0 : -1.0);
             }
@@ -148,14 +139,14 @@ void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParam
             prevLateral = lateralOut;
             prevAngular = angularOut;
 
-            applyOutput(lateralOut, angularOut, maxSpeed, turnCapFor(lateralOut, lateralRaw, maxSpeed));
+            applyOutput(lateralOut, angularOut, maxSpeed, turnCapFor(lateralOut, lateralRaw, close ? CLOSE_TURN_CAP : maxSpeed));
             pros::Task::delay_until(&wake, CONTROL_PERIOD_MS);
         }
         endMotion(earlyExit && p.minSpeed > 0);
     });
 }
 
-// ─── moveToPose (boomerang) ──────────────────────────────────────────────────
+//  moveToPose (boomerang) 
 //
 // Drive toward a "carrot" placed `lead * distance` behind the target along the
 // target heading. As the robot closes in, the carrot slides onto the target and
@@ -259,7 +250,7 @@ void Chassis::moveToPose(double x, double y, double theta, double timeoutMs, Mov
     });
 }
 
-// ─── moveDistance ────────────────────────────────────────────────────────────
+//  moveDistance 
 //
 // Drive a signed distance along a fixed heading, holding that heading.
 // Progress is the displacement PROJECTED onto the heading - never a raw

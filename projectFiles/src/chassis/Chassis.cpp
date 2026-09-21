@@ -13,7 +13,7 @@ Chassis::Chassis(DrivetrainConfig drivetrain,
       angularPID(angularSettings.toPID()),
       odom(sensors) {}
 
-// ─── Setup ───────────────────────────────────────────────────────────────────
+// Setup 
 
 bool Chassis::calibrate(bool calibrateImu) {
     bool ok = true;
@@ -52,7 +52,7 @@ bool Chassis::calibrate(bool calibrateImu) {
 void Chassis::setPose(double x, double y, double theta) { odom.setPose(x, y, theta); }
 void Chassis::setPose(Pose p) { odom.setPose(p); }
 
-// ─── Motion framework ────────────────────────────────────────────────────────
+//  Motion framework 
 
 void Chassis::requestMotionStart(bool async, std::function<void()> body) {
     // Only one motion may own the drivetrain. Starting a new one while another
@@ -118,7 +118,7 @@ bool Chassis::stalled(double elapsedMs, double error, double largeErr) {
     return (now - stallSince) >= (uint32_t)stall.timeMs;
 }
 
-// ─── Output ──────────────────────────────────────────────────────────────────
+//  Output 
 
 double Chassis::turnCapFor(double driveOut, double driveRaw, double floorWhenCruising) const {
     // "Ramping up" = the slew limiter is holding the drive below what the PID
@@ -146,7 +146,7 @@ void Chassis::applyOutput(double drive, double turn, double maxSpeed, double tur
     tank(l, r);
 }
 
-// ─── Manual drive ────────────────────────────────────────────────────────────
+//  Manual drive 
 
 void Chassis::tank(double left, double right) {
     left  = clamp(left,  -100.0, 100.0);

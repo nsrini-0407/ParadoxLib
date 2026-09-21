@@ -34,7 +34,6 @@ class PID {
         double update(double error, double dt) {
             if (dt <= 0.0) dt = 0.01;
 
-            // ── Integral ────────────────────────────────────────────────
             if (config.signFlipReset && sign(error) != sign(prevError) && !firstUpdate) {
                 integral = 0.0;
             }
@@ -43,13 +42,6 @@ class PID {
             }
             integral = clamp(integral, -config.integralLimit, config.integralLimit);
 
-            // ── Derivative ──────────────────────────────────────────────
-            // No derivative on the first update after a reset. prevError is 0
-            // then, so a move that begins with real error sees a step of
-            // (error - 0) across one dt and D spikes by error/dt - a 1.5 deg
-            // heading error at dt=0.02 makes the turn term jump ~75x its
-            // steady value, right when the drive term is still slewing up
-            // from zero, so it out-muscles the drive and the chassis pivots.
             double rawDerivative = 0.0;
             if (!firstUpdate) rawDerivative = (error - prevError) / dt;
             derivative = firstUpdate ? 0.0 : lowPass(derivative, rawDerivative, config.dFilter);
@@ -60,7 +52,6 @@ class PID {
             return (config.kP * error) + (config.kI * integral) + (config.kD * derivative);
         }
 
-        // Kept for source compatibility with earlier code.
         double Update(double error, double dt) { return update(error, dt); }
 
         void reset() {

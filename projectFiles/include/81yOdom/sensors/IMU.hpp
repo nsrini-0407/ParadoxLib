@@ -16,10 +16,7 @@ class IMU {
     public: 
         explicit IMU(int port) : imu(port) {}
 
-        // Blocking calibration with retry. Returns true on success. A single
-        // pros::Imu::reset(true) can fail (bumped during calibration, port
-        // glitch) and silently leave the sensor returning garbage; competition
-        // code should know that happened rather than drive off with it.
+        // Blocking calibration with retry. 
         bool calibrate(int maxAttempts = 3) {
             for (int attempt = 1; attempt <= maxAttempts; attempt++) {
                 if (imu.reset(true) == PROS_ERR) {
