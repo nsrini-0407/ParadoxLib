@@ -32,6 +32,7 @@ void runSelectedAuton() {
     if (g_selected >= 0 && g_selected < (int)g_routines.size()) g_routines[g_selected].run();
 }
 void setWatchedMotors(const std::vector<WatchedMotor>& motors) { g_motors = motors; }
+void setAutonRoutines(std::vector<AutonRoutine> routines) { g_routines = std::move(routines); }
 
 //  styling helpers 
 static lv_style_t style_btn_default, style_btn_selected, style_card;

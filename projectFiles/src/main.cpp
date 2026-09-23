@@ -1,4 +1,5 @@
 #include "main.h"
+#include "autonomous.hpp"
 #include "liblvgl/lvgl.h"
 #include <cstdio>
 
@@ -64,6 +65,12 @@ void initialize() {
     });
 	gui::setLogoImage(&logo);
 	gui::setOdomDebugProvider(get_odom_debug_data);
+	gui::setAutonRoutines({
+        {"Left WP",   [](){ autonLeftWP(chassis); }},
+        {"Right WP",  [](){ autonRightWP(chassis); }},
+        {"Skills",    [](){ autonSkills(chassis); }},
+        {"Do Nothing",[](){}},
+    });
 	gui::init();
 
 	if (!chassis.calibrate()) {
@@ -76,24 +83,7 @@ void disabled() {}
 void competition_initialize() {}
 	
 void autonomous() {
-	chassis.setPose(0, 0, 0);
-
-	chassis.moveToPoint(0,24,3000);
-	chassis.turnToHeading(90,2000);
-	chassis.moveToPoint(24,24,3000);
-	chassis.turnToHeading(180,2000);
-	chassis.moveToPoint(24,0,3000);
-	chassis.turnToHeading(270,2000);
-	chassis.moveToPoint(0,0,3000);
-	chassis.turnToHeading(0,2000);
-
-	//   chassis.moveToPoint(0, 24, 2000, {.minSpeed = 40, .earlyExitRange = 6});
-	//   chassis.moveToPoint(24, 48, 3000);
-	//
-	//   chassis.moveToPoint(0, 36, 3000, {.async = true});
-	//   chassis.waitUntil(12);
-	//   // intake.move(127);
-	//   chassis.waitUntilDone();
+	gui::runSelectedAuton();
 }
 
 void opcontrol() {
