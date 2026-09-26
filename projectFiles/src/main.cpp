@@ -5,52 +5,6 @@
 
 LV_IMAGE_DECLARE(logo);
 
-
-//Robot Config
-
-pros::MotorGroup leftMotors({-16, -5, -17});
-pros::MotorGroup rightMotors({1, 11, 13});
-
-pros::Motor leftFrontMotor(-16), leftBackMotor(-5),  leftTopMotor(-17);
-pros::Motor rightFrontMotor(1), rightBackMotor(11), rightTopMotor(13);
-
-pros::Rotation leftRotation(6);
-pros::Rotation rightRotation(7);
-pros::Rotation backRotation(9);
-
-TrackingWheel leftWheel (&leftRotation,  2, -1.625,  1.0, true);
-TrackingWheel rightWheel(&rightRotation, 2, +1.625,  1.0, true);
-TrackingWheel backWheel (&backRotation,  2, +2.0, 1.0, true);
-
-IMU imu(10);
-
-ControllerSettings lateralSettings {
-    .kP = 5.75,  .kI = 0,  .kD = 1.05,
-    .windupRange       = 3.0,
-    .smallError        = 0.5,   .smallErrorTimeout = 100,
-    .largeError        = 2.0,   .largeErrorTimeout = 400,
-    .slew              = 300,   // percent per second. 0 disables the ramp
-    .dFilter           = 0.715,
-};
-ControllerSettings angularSettings {
-    .kP = 2.2,  .kI = 0.0,  .kD = 0.2,
-    .windupRange       = 10.0,
-    .smallError        = 1.0,   .smallErrorTimeout = 100,
-    .largeError        = 3.0,   .largeErrorTimeout = 400,
-    .slew              = 0,
-    .dFilter           = 0.75,
-};
-
-Chassis chassis(
-    DrivetrainConfig{ .leftMotors = &leftMotors, .rightMotors = &rightMotors,
-                      .trackWidth = 11.5, .wheelDiameter = 3.25, .gearRatio = 1.0 },
-    lateralSettings,
-    angularSettings,
-    OdomSensors{ .vertical1 = &leftWheel, .vertical2 = &rightWheel,
-                 .horizontal1 = &backWheel, .imu = &imu }
-);
-
-
 static gui::OdomDebugData get_odom_debug_data() {
 	const Pose pose = chassis.getPose();
 	return {pose.x, pose.y, pose.theta};
@@ -92,15 +46,15 @@ void opcontrol() {
 	uint32_t lastPrint = 0;
 
 	while (true) {
-		const bool bench = !pros::competition::is_connected();
-		if (bench) {
-			if (master.get_digital_new_press(DIGITAL_A))    { chassis.brake(); autonomous(); }
-			if (master.get_digital_new_press(DIGITAL_B))    chassis.tuneDriveBalance();
-			if (master.get_digital_new_press(DIGITAL_X))    chassis.checkWheelDirections(master);
-			if (master.get_digital_new_press(DIGITAL_Y))    chassis.measureTrackingOffsets(master);
-			if (master.get_digital_new_press(DIGITAL_UP))   chassis.measureWheelDiameter(master, 48);
-			if (master.get_digital_new_press(DIGITAL_DOWN)) chassis.measureImuScalar(master, 5);
-		}
+		// const bool bench = !pros::competition::is_connected();
+		// if (bench) {
+		// 	if (master.get_digital_new_press(DIGITAL_A))    { chassis.brake(); autonomous(); }
+		// 	if (master.get_digital_new_press(DIGITAL_B))    chassis.tuneDriveBalance();
+		// 	if (master.get_digital_new_press(DIGITAL_X))    chassis.checkWheelDirections(master);
+		// 	if (master.get_digital_new_press(DIGITAL_Y))    chassis.measureTrackingOffsets(master);
+		// 	if (master.get_digital_new_press(DIGITAL_UP))   chassis.measureWheelDiameter(master, 48);
+		// 	if (master.get_digital_new_press(DIGITAL_DOWN)) chassis.measureImuScalar(master, 5);
+		// }
 
 		//arcade driving 
 		const double throttle = master.get_analog(ANALOG_LEFT_Y)  * (100.0 / 127.0);

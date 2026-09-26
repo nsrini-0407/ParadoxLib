@@ -76,6 +76,7 @@ void opcontrol(void);
  */
 #include "81yOdom/81yOdom.hpp"
 #include "gui/gui.hpp"
+#include "robot-config.h"
 //#include <iostream>
 #endif
 

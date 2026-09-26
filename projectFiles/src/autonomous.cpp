@@ -1,21 +1,14 @@
+#include "main.h"
 #include "autonomous.hpp"
 #include "pros/rtos.hpp"
 #include <cstdio>
-
-void spinRoller()   { printf("[auton] spinRoller\n");   pros::delay(300); }
-void closeClamp()   { printf("[auton] closeClamp\n");   pros::delay(200); }
-void openClamp()    { printf("[auton] openClamp\n");    pros::delay(200); }
-void liftUp()       { printf("[auton] liftUp\n");       pros::delay(300); }
-void liftDown()     { printf("[auton] liftDown\n");     pros::delay(300); }
-void intakePiece()  { printf("[auton] intakePiece\n");  pros::delay(300); }
-void scoreGoal()    { printf("[auton] scoreGoal\n");    pros::delay(300); }
 
 // WP route: flip roller, score preload + 1 field piece on our alliance goal,
 // score 1 more piece on the neutral goal (already holding 1) -> 4 pins across
 // 2 goals, 40 pts, qualifies for the Autonomous Win Point on our side alone.
 void autonLeftWP(Chassis& chassis) {
     chassis.setPose(-48, -48, 0);        // start touching the roller
-    spinRoller();                        // flip roller to our color
+    spinRoller();                                   // flip roller to our color
 
     chassis.moveToPoint(-48, -24, 1500); // drive to our alliance goal
     closeClamp();                        // clamp the alliance goal
