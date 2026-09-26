@@ -8,20 +8,26 @@ LV_IMAGE_DECLARE(logo);
 
 //Robot Config
 
-pros::MotorGroup leftMotors({-16, -5, -17});
-pros::MotorGroup rightMotors({1, 11, 13});
+pros::MotorGroup leftMotors({-8, -9, -10});
+pros::MotorGroup rightMotors({1, 2, 3});
+pros::MotorGroup liftMotors({4,-7});
 
 pros::Motor leftFrontMotor(-16), leftBackMotor(-5),  leftTopMotor(-17);
 pros::Motor rightFrontMotor(1), rightBackMotor(11), rightTopMotor(13);
 
 pros::Rotation leftRotation(6);
-pros::Rotation rightRotation(7);
-pros::Rotation backRotation(9);
+pros::Rotation rightRotation(5);
+pros::Rotation backRotation(20);
 
 TrackingWheel leftWheel (&leftRotation,  2, -1.625,  1.0, true);
 TrackingWheel rightWheel(&rightRotation, 2, +1.625,  1.0, true);
 TrackingWheel backWheel (&backRotation,  2, +2.0, 1.0, true);
 
+pros::ADIDigitalOut claw('A');
+pros::ADIDigitalOut flipper('B');
+
+bool clawToggle = false;
+bool flipperToggle = false;
 IMU imu(10);
 
 ControllerSettings lateralSettings {
@@ -66,17 +72,19 @@ void initialize() {
 	gui::setLogoImage(&logo);
 	gui::setOdomDebugProvider(get_odom_debug_data);
 	gui::setAutonRoutines({
-        {"Left WP",   [](){ autonLeftWP(chassis); }},
-        {"Right WP",  [](){ autonRightWP(chassis); }},
-        {"Skills",    [](){ autonSkills(chassis); }},
+        {"Left WP",   [](){ leftAuton(chassis); }},
+        {"Right WP",  [](){ rightAuton(chassis); }},
+        {"Skills",    [](){ skillsAuton(chassis); }},
         {"Do Nothing",[](){}},
     });
 	gui::init();
 
 	if (!chassis.calibrate()) {
-		printf("[robot] IMU FAILED to calibrate - check port 10 / reseat the sensor\n");
-	}
+			printf("[robot] IMU FAILED to calibrate - check port 10 / reseat the sensor\n");
+		}
 		chassis.setPose(0, 0, 0);
+		liftMotors.set_brake_mode_all(pros::MotorBrake::hold);
+		liftMotors.set_gearing_all(pros::MotorCartridge::red);
 	}
 
 void disabled() {}
@@ -92,15 +100,15 @@ void opcontrol() {
 	uint32_t lastPrint = 0;
 
 	while (true) {
-		const bool bench = !pros::competition::is_connected();
-		if (bench) {
-			if (master.get_digital_new_press(DIGITAL_A))    { chassis.brake(); autonomous(); }
-			if (master.get_digital_new_press(DIGITAL_B))    chassis.tuneDriveBalance();
-			if (master.get_digital_new_press(DIGITAL_X))    chassis.checkWheelDirections(master);
-			if (master.get_digital_new_press(DIGITAL_Y))    chassis.measureTrackingOffsets(master);
-			if (master.get_digital_new_press(DIGITAL_UP))   chassis.measureWheelDiameter(master, 48);
-			if (master.get_digital_new_press(DIGITAL_DOWN)) chassis.measureImuScalar(master, 5);
-		}
+		// const bool bench = !pros::competition::is_connected();
+		// if (bench) {
+		// 	if (master.get_digital_new_press(DIGITAL_A))    { chassis.brake(); autonomous(); }
+		// 	if (master.get_digital_new_press(DIGITAL_B))    chassis.tuneDriveBalance();
+		// 	if (master.get_digital_new_press(DIGITAL_X))    chassis.checkWheelDirections(master);
+		// 	if (master.get_digital_new_press(DIGITAL_Y))    chassis.measureTrackingOffsets(master);
+		// 	if (master.get_digital_new_press(DIGITAL_UP))   chassis.measureWheelDiameter(master, 48);
+		// 	if (master.get_digital_new_press(DIGITAL_DOWN)) chassis.measureImuScalar(master, 5);
+		// }
 
 		//arcade driving 
 		const double throttle = master.get_analog(ANALOG_LEFT_Y)  * (100.0 / 127.0);
@@ -115,6 +123,37 @@ void opcontrol() {
 			       chassis.getOdom().getLinearVelocity(), chassis.getOdom().getAngularVelocity(),
 			       chassis.getOdom().isHeadingFromImu() ? "" : "   [heading from WHEELS - IMU down]");
 		}
+		//l1 - up 4 bar, l2 down 4bar, b claw, down flipper
+		if(master.get_digital(DIGITAL_L1)) {
+			liftMotors.move(80);
+		} else if (master.get_digital(DIGITAL_L2)) {
+			liftMotors.move(-80);
+		} else {
+			liftMotors.brake();
+		}
+
+		pros::ADIDigitalOut claw ('A'); 
+		//create new ADI (tri wire port) device for the claw in port 'A'
+		bool clawToggle = false;
+		//create the boolean toggle to control the states
+		if (master.get_digital_new_press(DIGITAL_B)) { //if a new press is registered
+			if (clawToggle) { //if the claw is extended/true
+				claw.set_value(false); //close the claw piston
+				clawToggle = false; //update boolean accordingly
+			} else if (!flipperToggle) {//and vice versa! 
+				claw.set_value(true);
+				clawToggle = true;
+			}
+		} else if (master.get_digital_new_press(DIGITAL_DOWN)) {
+			if (flipperToggle) {
+				flipper.set_value(false);
+				flipperToggle = false;
+			} else if (!flipperToggle) {
+				flipper.set_value(true);
+				flipperToggle = true;
+			}
+		}
+
 		pros::delay(20);
 	}
 }
