@@ -20,17 +20,19 @@ void initialize() {
 	gui::setLogoImage(&logo);
 	gui::setOdomDebugProvider(get_odom_debug_data);
 	gui::setAutonRoutines({
-        {"Left WP",   [](){ autonLeftWP(chassis); }},
-        {"Right WP",  [](){ autonRightWP(chassis); }},
-        {"Skills",    [](){ autonSkills(chassis); }},
+        {"Left WP",   [](){ leftAuton(chassis); }},
+        {"Right WP",  [](){ rightAuton(chassis); }},
+        {"Skills",    [](){ skillsAuton(chassis); }},
         {"Do Nothing",[](){}},
     });
 	gui::init();
 
 	if (!chassis.calibrate()) {
-		printf("[robot] IMU FAILED to calibrate - check port 10 / reseat the sensor\n");
-	}
+			printf("[robot] IMU FAILED to calibrate - check port 10 / reseat the sensor\n");
+		}
 		chassis.setPose(0, 0, 0);
+		liftMotors.set_brake_mode_all(pros::MotorBrake::hold);
+		liftMotors.set_gearing_all(pros::MotorCartridge::red);
 	}
 
 void disabled() {}
@@ -69,6 +71,37 @@ void opcontrol() {
 			       chassis.getOdom().getLinearVelocity(), chassis.getOdom().getAngularVelocity(),
 			       chassis.getOdom().isHeadingFromImu() ? "" : "   [heading from WHEELS - IMU down]");
 		}
+		//l1 - up 4 bar, l2 down 4bar, b claw, down flipper
+		if(master.get_digital(DIGITAL_L1)) {
+			liftMotors.move(80);
+		} else if (master.get_digital(DIGITAL_L2)) {
+			liftMotors.move(-80);
+		} else {
+			liftMotors.brake();
+		}
+
+		pros::ADIDigitalOut claw ('A'); 
+		//create new ADI (tri wire port) device for the claw in port 'A'
+		bool clawToggle = false;
+		//create the boolean toggle to control the states
+		if (master.get_digital_new_press(DIGITAL_B)) { //if a new press is registered
+			if (clawToggle) { //if the claw is extended/true
+				claw.set_value(false); //close the claw piston
+				clawToggle = false; //update boolean accordingly
+			} else if (!flipperToggle) {//and vice versa! 
+				claw.set_value(true);
+				clawToggle = true;
+			}
+		} else if (master.get_digital_new_press(DIGITAL_DOWN)) {
+			if (flipperToggle) {
+				flipper.set_value(false);
+				flipperToggle = false;
+			} else if (!flipperToggle) {
+				flipper.set_value(true);
+				flipperToggle = true;
+			}
+		}
+
 		pros::delay(20);
 	}
 }
