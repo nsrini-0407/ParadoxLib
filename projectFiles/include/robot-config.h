@@ -29,10 +29,8 @@ extern ControllerSettings lateralSettings;
 extern ControllerSettings angularSettings;
 extern Chassis chassis;
 
-void spinRoller();   // spin drivetrain/roller against the field roller until it flips
-void closeClamp();   // close the goal clamp around a mobile goal
-void openClamp();    // release the goal clamp
-void liftUp();        // raise the lift to scoring height
-void liftDown();       // lower the lift back down
-void intakePiece();  // run the intake to grab a pin/cup or matchload
-void scoreGoal();    // dump the held piece(s) onto whichever goal is in front
+extern bool flipperToggle;
+extern bool clampToggle;
+
+extern void moveLift(int targetLevel);
+extern void scorePin();

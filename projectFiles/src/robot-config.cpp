@@ -25,7 +25,8 @@ IMU imu(10);
 pros::ADIDigitalOut claw ('A');
 pros::ADIDigitalOut flipper ('B');
 
-
+bool flipperToggle = false;
+bool clampToggle = false;
 
 
 //Odom configuration settings
