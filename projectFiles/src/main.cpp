@@ -39,7 +39,36 @@ void disabled() {}
 void competition_initialize() {}
 	
 void autonomous() {
-	gui::runSelectedAuton();
+	//gui::runSelectedAuton();
+	chassis.setPose(0,0,0);
+	chassis.turnToHeading(-45, 1500);
+	chassis.moveToPoint(7.5,-9,2000, {.forwards = false});
+	claw.set_value(true);
+	pros::delay(300);
+	chassis.moveToPoint(1.5,-4,1500);
+	chassis.turnToHeading(48, 1500);
+	chassisMotors.move(-27.5);
+	pros::delay(1350);
+	chassisMotors.brake();
+	claw.set_value(false);
+	pros::delay(200);
+	chassis.turnToHeading(-65, 1200);
+	chassis.moveToPoint(6, -11, 1200, {.forwards = false, .async = true});
+	liftMotors.move_voltage(12000);
+	pros::delay(450);
+	liftMotors.brake();
+	while(chassis.isInMotion()){
+		pros::delay(10);
+	}
+	liftMotors.move_voltage(-12000);
+	pros::delay(450);
+	liftMotors.brake();
+	claw.set_value(true);
+	pros::delay(200);
+	chassis.moveToPoint(0.5, -9.5, 1200);
+	chassis.turnToHeading(-25, 1200);
+	chassis.moveToPoint(8, -30.5, 1500, {.forwards = false});
+	claw.set_value(false);
 }
 
 void opcontrol() {
@@ -72,17 +101,15 @@ void opcontrol() {
 			       chassis.getOdom().isHeadingFromImu() ? "" : "   [heading from WHEELS - IMU down]");
 		}
 		//l1 - up 4 bar, l2 down 4bar, b claw, down flipper
-		if(master.get_digital(DIGITAL_L1)) {
-			liftMotors.move(80);
-		} else if (master.get_digital(DIGITAL_L2)) {
-			liftMotors.move(-80);
-		} else {
-			liftMotors.brake();
-		}
+		if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
+                //normal intake
+                liftMotors.move_voltage(12000);
+            }else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+                liftMotors.move_voltage(-12000);
+            } else {
+                liftMotors.brake();
+            }
 
-		pros::ADIDigitalOut claw ('A'); 
-		//create new ADI (tri wire port) device for the claw in port 'A'
-		bool clawToggle = false;
 		//create the boolean toggle to control the states
 		if (master.get_digital_new_press(DIGITAL_B)) { //if a new press is registered
 			if (clawToggle) { //if the claw is extended/true

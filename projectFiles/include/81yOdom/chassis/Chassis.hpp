@@ -90,6 +90,22 @@ struct TurnToHeadingParams {
     bool   async          = false;
 };
 
+enum class DriveSide { LEFT, RIGHT };
+enum class TurnDirection { AUTO, CW, CCW };   // AUTO = shortest way
+
+// Swing turn: one side of the drive is held in place and the other side drives,
+// so the robot pivots about the locked wheel instead of its center. Which way
+// the robot moves falls out of the geometry: lock LEFT and turn CW and the
+// right side drives backward; lock LEFT and turn CCW and it drives forward.
+// Use `direction` to force the long way round when you need a specific one.
+struct SwingToHeadingParams {
+    TurnDirection direction = TurnDirection::AUTO;
+    double maxSpeed       = 100;
+    double minSpeed       = 0;
+    double earlyExitRange = 0;      // degrees
+    bool   async          = false;
+};
+
 struct MoveDistanceParams {
     double maxSpeed       = 100;
     double minSpeed       = 0;
@@ -117,6 +133,7 @@ class Chassis {
 
         // Motions (blocking unless params.async)
         void turnToHeading(double theta, double timeoutMs, TurnToHeadingParams p = {});
+        void swingToHeading(double theta, DriveSide lockedSide, double timeoutMs, SwingToHeadingParams p = {});
         void moveToPoint(double x, double y, double timeoutMs, MoveToPointParams p = {});
         void moveToPose(double x, double y, double theta, double timeoutMs, MoveToPoseParams p = {});
         void moveDistance(double distance, double timeoutMs, MoveDistanceParams p = {});

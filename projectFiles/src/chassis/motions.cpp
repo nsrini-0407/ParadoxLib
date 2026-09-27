@@ -77,7 +77,83 @@ void Chassis::turnToHeading(double theta, double timeoutMs, TurnToHeadingParams 
     });
 }
 
-//  moveToPoint 
+//  swingToHeading
+//
+// Same control loop as turnToHeading, but only one side drives. The locked
+// side is put on HOLD for the duration - on plain brake it gets dragged along
+// and the pivot point wanders.
+
+void Chassis::swingToHeading(double theta, DriveSide lockedSide, double timeoutMs, SwingToHeadingParams p) {
+    requestMotionStart(p.async, [=, this] {
+        ExitCondition small(angularSettings.smallError, angularSettings.smallErrorTimeout);
+        ExitCondition large(angularSettings.largeError, angularSettings.largeErrorTimeout);
+
+        pros::MotorGroup* locked = lockedSide == DriveSide::LEFT ? dt.leftMotors  : dt.rightMotors;
+        pros::MotorGroup* driven = lockedSide == DriveSide::LEFT ? dt.rightMotors : dt.leftMotors;
+        // CW-positive: a CW turn needs left > right, so a driven left side
+        // takes +out and a driven right side takes -out.
+        const double drivenSign = lockedSide == DriveSide::LEFT ? -1.0 : 1.0;
+
+        pros::MotorBrake lockedPrevMode = pros::MotorBrake::brake;
+        if (locked) {
+            lockedPrevMode = locked->get_brake_mode();
+            locked->set_brake_mode_all(pros::MotorBrake::hold);
+            locked->brake();
+        }
+
+        uint32_t wake = pros::millis();
+        const uint32_t start = wake;
+        uint32_t lastMs = wake;
+        double prevOut = 0.0;
+        double lastTheta = odom.getPose().theta;
+        // A forced direction only matters while the target is more than 180
+        // deg away that way. Once shortest-path agrees with it, switch to
+        // shortest-path for good so an overshoot is corrected, not treated as
+        // another 360 deg to go.
+        bool forced = p.direction != TurnDirection::AUTO;
+        bool earlyExit = false;
+
+        while (!cancelled() && pros::millis() - start < (uint32_t)timeoutMs) {
+            const double dt = stepDt(lastMs);
+            const Pose pose = odom.getPose();
+
+            distTravelled.store(distTravelled.load() + std::fabs(normalizeAngle(pose.theta - lastTheta)));
+            lastTheta = pose.theta;
+
+            double error = pose.headingError(theta);
+            if (forced) {
+                const bool wantCW = p.direction == TurnDirection::CW;
+                if (error == 0.0 || (error > 0.0) == wantCW) {
+                    forced = false;
+                } else {
+                    error += wantCW ? 360.0 : -360.0;
+                }
+            }
+
+            if (small.update(error) || large.update(error)) break;
+            if (p.earlyExitRange > 0 && std::fabs(error) < p.earlyExitRange) { earlyExit = true; break; }
+            if (stalled(pros::millis() - start, error, angularSettings.largeError)) break;
+
+            double out = angularPID.update(error, dt);
+            out = clamp(out, -p.maxSpeed, p.maxSpeed);
+            out = slew(out, prevOut, angularSettings.slew, dt);
+
+            // Same static-friction floor as turnToHeading, same reason for
+            // keeping it out of the settle band.
+            if (std::fabs(error) > angularSettings.smallError && std::fabs(out) < p.minSpeed) {
+                out = p.minSpeed * sign(error);
+            }
+            prevOut = out;
+
+            if (driven) driven->move_voltage((int)(clamp(out * drivenSign, -100.0, 100.0) * 120.0));
+            pros::Task::delay_until(&wake, CONTROL_PERIOD_MS);
+        }
+        endMotion(earlyExit && p.minSpeed > 0);
+        if (locked) locked->set_brake_mode_all(lockedPrevMode);
+    });
+}
+
+//  moveToPoint
 
 void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParams p) {
     requestMotionStart(p.async, [=, this] {

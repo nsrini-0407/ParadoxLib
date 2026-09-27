@@ -3,6 +3,7 @@
 
 extern pros::MotorGroup leftMotors;
 extern pros::MotorGroup rightMotors;
+extern pros::MotorGroup chassisMotors;
 extern pros::MotorGroup liftMotors;
 
 extern pros::Motor leftFrontMotor;
@@ -30,7 +31,7 @@ extern ControllerSettings angularSettings;
 extern Chassis chassis;
 
 extern bool flipperToggle;
-extern bool clampToggle;
+extern bool clawToggle;
 
 extern void moveLift(int targetLevel);
 extern void scorePin();

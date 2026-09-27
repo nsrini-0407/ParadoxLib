@@ -4,45 +4,46 @@
 
 
 //Motors and sensors
-pros::MotorGroup leftMotors({-16, -5, -17});
-pros::MotorGroup rightMotors({1, 11, 13});
-pros::MotorGroup liftMotors({-15, -14});
+pros::MotorGroup leftMotors({-8,-9,-10});
+pros::MotorGroup rightMotors({1,2,3});
+pros::MotorGroup chassisMotors({-8,-9,-10,1,2,3});
+pros::MotorGroup liftMotors({4,-7});
 
-pros::Motor leftFrontMotor(-16), leftBackMotor(-5),  leftTopMotor(-17);
-pros::Motor rightFrontMotor(1), rightBackMotor(11), rightTopMotor(13);
+pros::Motor leftFrontMotor(-8), leftBackMotor(-9),  leftTopMotor(-10);
+pros::Motor rightFrontMotor(1), rightBackMotor(2), rightTopMotor(3);
 
-pros::Rotation leftRotation(6);
-pros::Rotation rightRotation(7);
-pros::Rotation backRotation(9);
+pros::Rotation leftRotation(5);
+pros::Rotation rightRotation(6);
+pros::Rotation backRotation(20);
 pros::Rotation liftRotation(8);
 
 TrackingWheel leftWheel (&leftRotation,  2, -1.625,  1.0, true);
 TrackingWheel rightWheel(&rightRotation, 2, +1.625,  1.0, true);
 TrackingWheel backWheel (&backRotation,  2, +2.0, 1.0, true);
 
-IMU imu(10);
+IMU imu(11);
 
 pros::ADIDigitalOut claw ('A');
 pros::ADIDigitalOut flipper ('B');
 
 bool flipperToggle = false;
-bool clampToggle = false;
+bool clawToggle = false;
 
 
 //Odom configuration settings
 ControllerSettings lateralSettings {
-    .kP = 5.75,  .kI = 0,  .kD = 1.05,
+    .kP = 6.15,  .kI = 0,  .kD = 1.05,
     .windupRange       = 3.0,
     .smallError        = 0.5,   .smallErrorTimeout = 100,
-    .largeError        = 2.0,   .largeErrorTimeout = 400,
+    .largeError        = 2.0,   .largeErrorTimeout = 200,
     .slew              = 300,   // percent per second. 0 disables the ramp
     .dFilter           = 0.715,
 };
 ControllerSettings angularSettings {
-    .kP = 2.2,  .kI = 0.0,  .kD = 0.2,
+    .kP = 2.2,  .kI = 0.0,  .kD = 0.25,
     .windupRange       = 10.0,
     .smallError        = 1.0,   .smallErrorTimeout = 100,
-    .largeError        = 3.0,   .largeErrorTimeout = 400,
+    .largeError        = 3.0,   .largeErrorTimeout = 200,
     .slew              = 0,
     .dFilter           = 0.75,
 };
