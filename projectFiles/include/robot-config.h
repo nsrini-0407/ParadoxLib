@@ -5,6 +5,7 @@ extern pros::MotorGroup leftMotors;
 extern pros::MotorGroup rightMotors;
 extern pros::MotorGroup chassisMotors;
 extern pros::MotorGroup liftMotors;
+extern pros::Motor roller;
 
 extern pros::Motor leftFrontMotor;
 extern pros::Motor leftBackMotor;

@@ -40,35 +40,73 @@ void competition_initialize() {}
 	
 void autonomous() {
 	//gui::runSelectedAuton();
-	chassis.setPose(0,0,0);
-	chassis.turnToHeading(-45, 1500);
-	chassis.moveToPoint(7.5,-9,2000, {.forwards = false});
+	chassis.setPose(1.2,0.18,-38);
+	roller.move(-127);
+	pros::delay(1100);
+	roller.brake();
+	chassis.moveToPose(7.25,-8.5,-45,2000, {.forwards = false});
 	claw.set_value(true);
 	pros::delay(300);
-	chassis.moveToPoint(1.5,-4,1500);
-	chassis.turnToHeading(48, 1500);
-	chassisMotors.move(-27.5);
+	chassis.moveToPoint(3,-3,1500);
+	chassis.turnToHeading(38, 1500);
+	chassisMotors.move(-31.5);
 	pros::delay(1350);
 	chassisMotors.brake();
 	claw.set_value(false);
 	pros::delay(200);
-	chassis.turnToHeading(-65, 1200);
-	chassis.moveToPoint(6, -11, 1200, {.forwards = false, .async = true});
+	chassis.turnToHeading(45, 500);
+	chassis.moveToPoint(11, 3, 3500, { .minSpeed = 15, .earlyExitRange = 0.75, .async = true});
+	pros::delay(350);
 	liftMotors.move_voltage(12000);
-	pros::delay(450);
+	pros::delay(750);
 	liftMotors.brake();
 	while(chassis.isInMotion()){
 		pros::delay(10);
 	}
+	chassis.turnToHeading(0,1200, {.minSpeed = 15, .earlyExitRange = 0.5});
+	chassis.moveToPoint(12, -8, 2000, {.forwards = false});
 	liftMotors.move_voltage(-12000);
-	pros::delay(450);
-	liftMotors.brake();
+	pros::delay(250);
 	claw.set_value(true);
-	pros::delay(200);
-	chassis.moveToPoint(0.5, -9.5, 1200);
-	chassis.turnToHeading(-25, 1200);
-	chassis.moveToPoint(8, -30.5, 1500, {.forwards = false});
+	pros::delay(250);
+	liftMotors.brake();
+	chassis.moveToPoint(12, 10, 1500, {.minSpeed = 15, .earlyExitRange = 1});
+	chassis.turnToHeading(-45, 1200, {.minSpeed = 15, .earlyExitRange = 0.75});
+	chassis.moveToPoint(30.25, -9.5, 3000, {.forwards = false});
 	claw.set_value(false);
+	pros::delay(150);
+	chassis.turnToHeading(155, 1000, {.minSpeed = 15, .earlyExitRange = 0.75, .async = true});
+	liftMotors.move_voltage(120000);
+	pros::delay(1250);
+	liftMotors.brake();
+	while(chassis.isInMotion()){
+		pros::delay(10);
+	}
+	chassis.moveToPoint(15, 27, 2000, {.forwards = false, .earlyExitRange = 1});
+	liftMotors.move_voltage(-120000);
+	pros::delay(250);
+	claw.set_value(true);
+	pros::delay(250);
+	liftMotors.brake();
+
+
+
+	// chassis.moveToPoint(6, -11, 1200, {.forwards = false, .async = true});
+	// liftMotors.move_voltage(12000);
+	// pros::delay(450);
+	// liftMotors.brake();
+	// while(chassis.isInMotion()){
+	// 	pros::delay(10);
+	// }
+	// liftMotors.move_voltage(-12000);
+	// pros::delay(450);
+	// liftMotors.brake();
+	// claw.set_value(true);
+	// pros::delay(200);
+	// chassis.moveToPoint(0.5, -9.5, 1200);
+	// chassis.turnToHeading(-25, 1200);
+	// chassis.moveToPoint(8, -30.5, 1500, {.forwards = false});
+	// claw.set_value(false);
 }
 
 void opcontrol() {

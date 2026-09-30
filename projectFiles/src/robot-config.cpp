@@ -8,6 +8,7 @@ pros::MotorGroup leftMotors({-8,-9,-10});
 pros::MotorGroup rightMotors({1,2,3});
 pros::MotorGroup chassisMotors({-8,-9,-10,1,2,3});
 pros::MotorGroup liftMotors({4,-7});
+pros::Motor roller(19);
 
 pros::Motor leftFrontMotor(-8), leftBackMotor(-9),  leftTopMotor(-10);
 pros::Motor rightFrontMotor(1), rightBackMotor(2), rightTopMotor(3);
@@ -42,8 +43,8 @@ ControllerSettings lateralSettings {
 ControllerSettings angularSettings {
     .kP = 2.2,  .kI = 0.0,  .kD = 0.25,
     .windupRange       = 10.0,
-    .smallError        = 1.0,   .smallErrorTimeout = 100,
-    .largeError        = 3.0,   .largeErrorTimeout = 200,
+    .smallError        = 0.5,   .smallErrorTimeout = 100,
+    .largeError        = 1.0,   .largeErrorTimeout = 200,
     .slew              = 0,
     .dFilter           = 0.75,
 };
