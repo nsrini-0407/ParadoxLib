@@ -1,3 +1,10 @@
+
 {
-  "CurrentProjectSetting": "No Configurations"
+  "CurrentProjectSetting": "No Configurations",
+  "clangd.arguments": [
+    "--query-driver=C:\\Users\\YOUR_WINDOWS_USERNAME\\AppData\\Roaming\\Code\\User\\globalStorage\\purduesigbots.pros-v5\\pros-toolchain\\bin\\arm-none-eabi-g++*",
+    "--background-index",
+    "--clang-tidy"
+]
+  
 }

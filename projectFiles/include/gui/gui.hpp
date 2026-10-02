@@ -15,6 +15,7 @@ struct AutonRoutine {
 };
 
 void runSelectedAuton();
+void setAutonRoutines(std::vector<AutonRoutine> routines);
 
 // Returns the index of the currently selected auton (-1 if none picked yet).
 int getSelectedAutonIndex();
