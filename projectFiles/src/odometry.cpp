@@ -5,8 +5,12 @@
 
 
 void Odom::setPose(Pose p) {
-    if (s.imu) s.imu->setRotation(p.theta);
+    // IMU re-zero and prevRotation must change together under the lock. If
+    // update() read the IMU in the old frame and diffed it against the new
+    // prevRotation, the whole setPose heading change was integrated as one
+    // cycle of rotation.
     ScopedLock lock(mutex);
+    if (s.imu) s.imu->setRotation(p.theta);
     pose = p;
     prevRotation = p.theta;
     havePrevRotation = true;
@@ -18,6 +22,7 @@ Pose Odom::getPose() const {
 }
 
 void Odom::reset() {
+    ScopedLock lock(mutex);
     TrackingWheel* wheels[] = {s.vertical1, s.vertical2, s.horizontal1, s.horizontal2};
     for (TrackingWheel* w : wheels) if (w) w->recordPosition();
     if (s.imu) {
@@ -37,6 +42,10 @@ double Odom::getLinearVelocity()  const { ScopedLock l(mutex); return linVel; }
 double Odom::getAngularVelocity() const { ScopedLock l(mutex); return angVel; }
 
 void Odom::update() {
+    // Held for the whole cycle so setPose() can never land between the sensor
+    // reads and the integration. Reads are cached values - this is microseconds.
+    ScopedLock lock(mutex);
+
     //  Sample every sensor once, as close together as possible 
     const double dV1 = s.vertical1   ? s.vertical1->update()   : 0.0;
     const double dV2 = s.vertical2   ? s.vertical2->update()   : 0.0;
@@ -49,10 +58,19 @@ void Odom::update() {
     lastUpdateMs = now;
     if (dt <= 0.0 || dt > 0.5) dt = 0.01;   // first cycle / after a stall
 
-    const bool v1ok = s.vertical1   && !s.vertical1->isFaulted();
-    const bool v2ok = s.vertical2   && !s.vertical2->isFaulted();
-    const bool h1ok = s.horizontal1 && !s.horizontal1->isFaulted();
-    const bool h2ok = s.horizontal2 && !s.horizontal2->isFaulted();
+    // A wheel cannot physically roll further than this in one cycle. A bigger
+    // delta is a sensor glitch (a stale/late reset, a one-revolution count
+    // jump) and is dropped instead of being integrated into the pose.
+    const double maxStep = MAX_WHEEL_SPEED * dt + 0.5;
+    auto usable = [&](TrackingWheel* w, double d) {
+        if (!w || w->isFaulted()) return false;
+        if (std::fabs(d) > maxStep) { rejectedSamples++; return false; }
+        return true;
+    };
+    const bool v1ok = usable(s.vertical1,   dV1);
+    const bool v2ok = usable(s.vertical2,   dV2);
+    const bool h1ok = usable(s.horizontal1, dH1);
+    const bool h2ok = usable(s.horizontal2, dH2);
 
     //  Heading change 
     double dThetaDeg = 0.0;
@@ -94,7 +112,6 @@ void Odom::update() {
     const double localX = dX * k;
     const double localY = dY * k;
 
-    ScopedLock lock(mutex);
     const double newTheta = pose.theta + dThetaDeg;
     const double avg = toRad(newTheta) - dTheta / 2.0;
     const double fx = localY * std::sin(avg) + localX * std::cos(avg);

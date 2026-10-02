@@ -31,6 +31,10 @@ bool Chassis::calibrate(bool calibrateImu) {
     }
 
     TrackingWheel* wheels[] = {s.vertical1, s.vertical2, s.horizontal1, s.horizontal2};
+    for (TrackingWheel* w : wheels) if (w) w->init();
+    // Let every sensor report at least once with the new settings before the
+    // baseline is taken, so it is not taken from a pre-init sample.
+    pros::delay(50);
     for (TrackingWheel* w : wheels) if (w) w->reset();
 
     odom.setPose(0.0, 0.0, 0.0);
