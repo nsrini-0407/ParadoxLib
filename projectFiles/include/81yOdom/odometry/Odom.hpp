@@ -34,6 +34,12 @@ class Odom {
         // Diagnostics
         bool isHeadingFromImu() const { return headingFromImu; }
         bool anyWheelFaulted() const;
+        // Wheel samples thrown out as physically impossible jumps. Should stay
+        // 0; if it climbs, a sensor or its cable is glitching.
+        uint32_t getRejectedSamples() const { return rejectedSamples; }
+
+        // in/s - comfortably above any V5 drivetrain's top speed.
+        static constexpr double MAX_WHEEL_SPEED = 200.0;
 
         const OdomSensors& sensors() const { return s; }
 
@@ -45,6 +51,7 @@ class Odom {
         uint32_t lastUpdateMs = 0;
         double linVel = 0.0, angVel = 0.0;
         bool headingFromImu = true;
+        uint32_t rejectedSamples = 0;
         mutable pros::Mutex mutex;
 };
 

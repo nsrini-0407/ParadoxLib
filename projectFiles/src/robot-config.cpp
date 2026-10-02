@@ -4,6 +4,7 @@
 
 
 //Motors and sensors
+pros::Controller master(pros::E_CONTROLLER_MASTER);
 pros::MotorGroup leftMotors({-8,-9,-10});
 pros::MotorGroup rightMotors({1,2,3});
 pros::MotorGroup chassisMotors({-8,-9,-10,1,2,3});
@@ -33,7 +34,7 @@ bool clawToggle = false;
 
 //Odom configuration settings
 ControllerSettings lateralSettings {
-    .kP = 6.15,  .kI = 0,  .kD = 1.05,
+    .kP = 7,  .kI = 0,  .kD = 1.05,
     .windupRange       = 3.0,
     .smallError        = 0.5,   .smallErrorTimeout = 100,
     .largeError        = 2.0,   .largeErrorTimeout = 200,
