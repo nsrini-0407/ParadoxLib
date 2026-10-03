@@ -21,6 +21,13 @@ void setAutonRoutines(std::vector<AutonRoutine> routines);
 int getSelectedAutonIndex();
 std::string getSelectedAutonName();
 
+// Debug: select an auton from code, ignoring the touchscreen and the
+// competition lock. Safe to call before or after gui::init(); the button
+// highlight catches up on the next GUI refresh. Returns false (and leaves the
+// selection alone) if the index/name doesn't match a routine.
+bool forceSelectAuton(int index);
+bool forceSelectAuton(const std::string& name);
+
 // A motor to display on the "Motors" tab, with a label.
 struct WatchedMotor {
     std::string label;      // e.g. "L Front"

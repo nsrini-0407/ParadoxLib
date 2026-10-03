@@ -31,6 +31,24 @@ std::string getSelectedAutonName() {
 void runSelectedAuton() {
     if (g_selected >= 0 && g_selected < (int)g_routines.size()) g_routines[g_selected].run();
 }
+bool forceSelectAuton(int index) {
+    if (index < 0 || index >= (int)g_routines.size()) {
+        printf("[gui] forceSelectAuton: no routine at index %d\n", index);
+        return false;
+    }
+    // Only the int is written here; the buttons are restyled from the GUI timer
+    // so this never touches LVGL off the daemon task.
+    g_selected = index;
+    printf("[gui] forced auton: %s\n", g_routines[index].name.c_str());
+    return true;
+}
+bool forceSelectAuton(const std::string& name) {
+    for (size_t i = 0; i < g_routines.size(); i++) {
+        if (g_routines[i].name == name) return forceSelectAuton((int)i);
+    }
+    printf("[gui] forceSelectAuton: no routine named \"%s\"\n", name.c_str());
+    return false;
+}
 void setWatchedMotors(const std::vector<WatchedMotor>& motors) { g_motors = motors; }
 void setAutonRoutines(std::vector<AutonRoutine> routines) { g_routines = std::move(routines); }
 
@@ -99,25 +117,29 @@ static void build_home_tab(lv_obj_t* tab) {
 }
 
 //  Autonomous tab 
-static void auton_btn_event_cb(lv_event_t* e) {
-    if (g_locked) return;
+static int g_styled_selection = -1;  // selection the buttons currently show
 
-    int idx = (int)(intptr_t)lv_event_get_user_data(e);
-    g_selected = idx;
-
+static void refresh_auton_btn_styles() {
     for (size_t i = 0; i < g_auton_btns.size(); i++) {
         lv_obj_t* btn = g_auton_btns[i];
 
-        // Remove only OUR color styles—keep the button's size and position.
         lv_obj_remove_style(btn, &style_btn_default, LV_PART_MAIN);
         lv_obj_remove_style(btn, &style_btn_selected, LV_PART_MAIN);
 
         lv_obj_add_style(
             btn,
-            (int)i == idx ? &style_btn_selected : &style_btn_default,
+            (int)i == g_selected ? &style_btn_selected : &style_btn_default,
             LV_PART_MAIN
         );
     }
+    g_styled_selection = g_selected;
+}
+
+static void auton_btn_event_cb(lv_event_t* e) {
+    if (g_locked) return;
+
+    g_selected = (int)(intptr_t)lv_event_get_user_data(e);
+    refresh_auton_btn_styles();
 }
 
 static lv_obj_t* lbl_selected_display;
@@ -220,6 +242,9 @@ static void telemetry_timer_cb(lv_timer_t*) {
     // time, lock the auton selector so nobody can bump it mid-match
     // Selectable whenever the robot is disabled; locked only while enabled.
     g_locked = !pros::competition::is_disabled();
+
+    // picks up selections made by forceSelectAuton()
+    if (g_selected != g_styled_selection) refresh_auton_btn_styles();
 
     // update selected-auton readout
     char sel[48];

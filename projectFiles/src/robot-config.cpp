@@ -30,22 +30,24 @@ pros::ADIDigitalOut flipper ('B');
 
 bool flipperToggle = false;
 bool clawToggle = false;
+int autonselector = 1;
+int r = -1;
 
 
 //Odom configuration settings
 ControllerSettings lateralSettings {
     .kP = 7,  .kI = 0,  .kD = 1.05,
     .windupRange       = 3.0,
-    .smallError        = 0.5,   .smallErrorTimeout = 100,
-    .largeError        = 2.0,   .largeErrorTimeout = 200,
+    .smallError        = 0.5,   .smallErrorTimeout = 75,
+    .largeError        = 2.0,   .largeErrorTimeout = 125,
     .slew              = 300,   // percent per second. 0 disables the ramp
     .dFilter           = 0.715,
 };
 ControllerSettings angularSettings {
     .kP = 2.2,  .kI = 0.0,  .kD = 0.25,
     .windupRange       = 10.0,
-    .smallError        = 0.5,   .smallErrorTimeout = 100,
-    .largeError        = 1.0,   .largeErrorTimeout = 200,
+    .smallError        = 0.5,   .smallErrorTimeout = 50,
+    .largeError        = 1.0,   .largeErrorTimeout = 75,
     .slew              = 0,
     .dFilter           = 0.75,
 };
