@@ -36,13 +36,15 @@ void initialize() {
 		chassis.setPose(0, 0, 0); //CHANGE
 		liftMotors.set_brake_mode_all(pros::MotorBrake::hold);
 		liftMotors.set_gearing_all(pros::MotorCartridge::red);
+		liftMotors.set_encoder_units_all(pros::E_MOTOR_ENCODER_ROTATIONS);
 	}
 
 void disabled() {}
 void competition_initialize() {}
 	
+
 void autonomous() {
-	gui::forceSelectAuton("Skills");
+	gui::forceSelectAuton("Left WP");
 	gui::runSelectedAuton();
 	
 	// chassisMotors.move(-75);
@@ -154,6 +156,9 @@ void opcontrol() {
 		} else {
 			roller.brake();
 		}
+		if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+			scorePin();
+		}
 
 		//create the boolean toggle to control the states
 		if (master.get_digital_new_press(DIGITAL_B)) { //if a new press is registered
@@ -173,7 +178,6 @@ void opcontrol() {
 				flipperToggle = true;
 			}
 		}
-
 		pros::delay(20);
 	}
 }

@@ -89,8 +89,12 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
     }
 
     void scorePin() {
-        moveLift(0); //move lift down to the bottom position
-        claw.set_value(false); //open claw to release pin
-        pros::delay(300); //delay for piston to actuate and release the pin
-        moveLift(1); //move lift up to the first position to move off of the pin
+        liftMotors.move_voltage(-6000);
+        pros::delay(350);
+        liftMotors.brake();
+        claw.set_value(false);
+        pros::delay(300);
+        liftMotors.move_voltage(8000);
+        pros::delay(300);
+        liftMotors.brake();
     }

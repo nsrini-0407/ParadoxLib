@@ -35,8 +35,13 @@ double curvatureTo(const Pose& pose, double ox, double oy) {
 
 void Chassis::turnToHeading(double theta, double timeoutMs, TurnToHeadingParams p) {
     requestMotionStart(p.async, [=, this] {
-        ExitCondition small(angularSettings.smallError, angularSettings.smallErrorTimeout);
-        ExitCondition large(angularSettings.largeError, angularSettings.largeErrorTimeout);
+        // Per-motion overrides; unset fields fall back to the chassis config.
+        // Reloaded every motion, so an override never leaks into the next one.
+        const ControllerSettings ang = p.angular.applyTo(angularSettings);
+        angularPID.setConfig(ang.toPID());
+
+        ExitCondition small(ang.smallError, ang.smallErrorTimeout);
+        ExitCondition large(ang.largeError, ang.largeErrorTimeout);
 
         uint32_t wake = pros::millis();
         const uint32_t start = wake;
@@ -56,16 +61,16 @@ void Chassis::turnToHeading(double theta, double timeoutMs, TurnToHeadingParams 
 
             if (small.update(error) || large.update(error)) break;
             if (p.earlyExitRange > 0 && std::fabs(error) < p.earlyExitRange) { earlyExit = true; break; }
-            if (stalled(pros::millis() - start, error, angularSettings.largeError)) break;
+            if (stalled(pros::millis() - start, error, ang.largeError)) break;
 
             double out = angularPID.update(error, dt);
             out = clamp(out, -p.maxSpeed, p.maxSpeed);
-            out = slew(out, prevOut, angularSettings.slew, dt);
+            out = slew(out, prevOut, ang.slew, dt);
 
             // Floor to beat static friction - but only while there is real
             // error left. Applied inside the settle band it flips sign every
             // time error crosses zero and the robot buzzes instead of stopping.
-            if (std::fabs(error) > angularSettings.smallError && std::fabs(out) < p.minSpeed) {
+            if (std::fabs(error) > ang.smallError && std::fabs(out) < p.minSpeed) {
                 out = p.minSpeed * sign(error);
             }
             prevOut = out;
@@ -85,8 +90,11 @@ void Chassis::turnToHeading(double theta, double timeoutMs, TurnToHeadingParams 
 
 void Chassis::swingToHeading(double theta, DriveSide lockedSide, double timeoutMs, SwingToHeadingParams p) {
     requestMotionStart(p.async, [=, this] {
-        ExitCondition small(angularSettings.smallError, angularSettings.smallErrorTimeout);
-        ExitCondition large(angularSettings.largeError, angularSettings.largeErrorTimeout);
+        const ControllerSettings ang = p.angular.applyTo(angularSettings);
+        angularPID.setConfig(ang.toPID());
+
+        ExitCondition small(ang.smallError, ang.smallErrorTimeout);
+        ExitCondition large(ang.largeError, ang.largeErrorTimeout);
 
         pros::MotorGroup* locked = lockedSide == DriveSide::LEFT ? dt.leftMotors  : dt.rightMotors;
         pros::MotorGroup* driven = lockedSide == DriveSide::LEFT ? dt.rightMotors : dt.leftMotors;
@@ -132,15 +140,15 @@ void Chassis::swingToHeading(double theta, DriveSide lockedSide, double timeoutM
 
             if (small.update(error) || large.update(error)) break;
             if (p.earlyExitRange > 0 && std::fabs(error) < p.earlyExitRange) { earlyExit = true; break; }
-            if (stalled(pros::millis() - start, error, angularSettings.largeError)) break;
+            if (stalled(pros::millis() - start, error, ang.largeError)) break;
 
             double out = angularPID.update(error, dt);
             out = clamp(out, -p.maxSpeed, p.maxSpeed);
-            out = slew(out, prevOut, angularSettings.slew, dt);
+            out = slew(out, prevOut, ang.slew, dt);
 
             // Same static-friction floor as turnToHeading, same reason for
             // keeping it out of the settle band.
-            if (std::fabs(error) > angularSettings.smallError && std::fabs(out) < p.minSpeed) {
+            if (std::fabs(error) > ang.smallError && std::fabs(out) < p.minSpeed) {
                 out = p.minSpeed * sign(error);
             }
             prevOut = out;
@@ -157,8 +165,13 @@ void Chassis::swingToHeading(double theta, DriveSide lockedSide, double timeoutM
 
 void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParams p) {
     requestMotionStart(p.async, [=, this] {
-        ExitCondition small(lateralSettings.smallError, lateralSettings.smallErrorTimeout);
-        ExitCondition large(lateralSettings.largeError, lateralSettings.largeErrorTimeout);
+        const ControllerSettings lat = p.lateral.applyTo(lateralSettings);
+        const ControllerSettings ang = p.angular.applyTo(angularSettings);
+        lateralPID.setConfig(lat.toPID());
+        angularPID.setConfig(ang.toPID());
+
+        ExitCondition small(lat.smallError, lat.smallErrorTimeout);
+        ExitCondition large(lat.largeError, lat.largeErrorTimeout);
 
         uint32_t wake = pros::millis();
         const uint32_t start = wake;
@@ -192,11 +205,11 @@ void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParam
             double lateralError = d * std::cos(toRad(angularError));
             if (!p.forwards) lateralError = -lateralError;
 
-            if (close && d < lateralSettings.largeError * 1.5) {
+            if (close && d < lat.largeError * 1.5) {
                 if (small.update(lateralError) || large.update(lateralError)) break;
             }
             if (p.earlyExitRange > 0 && d < p.earlyExitRange) { earlyExit = true; break; }
-            if (stalled(pros::millis() - start, d, lateralSettings.largeError)) break;
+            if (stalled(pros::millis() - start, d, lat.largeError)) break;
 
             double lateralRaw = lateralPID.update(lateralError, dt);
             double angularOut = angularPID.update(angularError, dt);
@@ -210,8 +223,8 @@ void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParam
                 lateralRaw = p.minSpeed * (p.forwards ? 1.0 : -1.0);
             }
 
-            const double lateralOut = slew(lateralRaw, prevLateral, lateralSettings.slew, dt);
-            angularOut = slew(angularOut, prevAngular, angularSettings.slew, dt);
+            const double lateralOut = slew(lateralRaw, prevLateral, lat.slew, dt);
+            angularOut = slew(angularOut, prevAngular, ang.slew, dt);
             prevLateral = lateralOut;
             prevAngular = angularOut;
 
@@ -231,8 +244,13 @@ void Chassis::moveToPoint(double x, double y, double timeoutMs, MoveToPointParam
 
 void Chassis::moveToPose(double x, double y, double theta, double timeoutMs, MoveToPoseParams p) {
     requestMotionStart(p.async, [=, this] {
-        ExitCondition small(lateralSettings.smallError, lateralSettings.smallErrorTimeout);
-        ExitCondition large(lateralSettings.largeError, lateralSettings.largeErrorTimeout);
+        const ControllerSettings lat = p.lateral.applyTo(lateralSettings);
+        const ControllerSettings ang = p.angular.applyTo(angularSettings);
+        lateralPID.setConfig(lat.toPID());
+        angularPID.setConfig(ang.toPID());
+
+        ExitCondition small(lat.smallError, lat.smallErrorTimeout);
+        ExitCondition large(lat.largeError, lat.largeErrorTimeout);
 
         uint32_t wake = pros::millis();
         const uint32_t start = wake;
@@ -287,7 +305,7 @@ void Chassis::moveToPose(double x, double y, double theta, double timeoutMs, Mov
 
             if (close && (small.update(lateralError) || large.update(lateralError))) break;
             if (p.earlyExitRange > 0 && d < p.earlyExitRange) { earlyExit = true; break; }
-            if (stalled(pros::millis() - start, d, lateralSettings.largeError)) break;
+            if (stalled(pros::millis() - start, d, lat.largeError)) break;
 
             double lateralRaw = lateralPID.update(lateralError, dt);
             double angularOut = angularPID.update(angularError, dt);
@@ -311,8 +329,8 @@ void Chassis::moveToPose(double x, double y, double theta, double timeoutMs, Mov
                 lateralRaw = p.minSpeed * (p.forwards ? 1.0 : -1.0);
             }
 
-            const double lateralOut = slew(lateralRaw, prevLateral, lateralSettings.slew, dt);
-            angularOut = slew(angularOut, prevAngular, angularSettings.slew, dt);
+            const double lateralOut = slew(lateralRaw, prevLateral, lat.slew, dt);
+            angularOut = slew(angularOut, prevAngular, ang.slew, dt);
             prevLateral = lateralOut;
             prevAngular = angularOut;
 
@@ -334,8 +352,13 @@ void Chassis::moveToPose(double x, double y, double theta, double timeoutMs, Mov
 
 void Chassis::moveDistance(double distance, double timeoutMs, MoveDistanceParams p) {
     requestMotionStart(p.async, [=, this] {
-        ExitCondition small(lateralSettings.smallError, lateralSettings.smallErrorTimeout);
-        ExitCondition large(lateralSettings.largeError, lateralSettings.largeErrorTimeout);
+        const ControllerSettings lat = p.lateral.applyTo(lateralSettings);
+        const ControllerSettings ang = p.angular.applyTo(angularSettings);
+        lateralPID.setConfig(lat.toPID());
+        angularPID.setConfig(ang.toPID());
+
+        ExitCondition small(lat.smallError, lat.smallErrorTimeout);
+        ExitCondition large(lat.largeError, lat.largeErrorTimeout);
 
         const Pose startPose = odom.getPose();
         const double heading = std::isfinite(p.heading) ? p.heading : startPose.theta;
@@ -362,17 +385,17 @@ void Chassis::moveDistance(double distance, double timeoutMs, MoveDistanceParams
 
             if (small.update(error) || large.update(error)) break;
             if (p.earlyExitRange > 0 && std::fabs(error) < p.earlyExitRange) { earlyExit = true; break; }
-            if (stalled(pros::millis() - start, error, lateralSettings.largeError)) break;
+            if (stalled(pros::millis() - start, error, lat.largeError)) break;
 
             double lateralRaw = clamp(lateralPID.update(error, dt), -p.maxSpeed, p.maxSpeed);
             double angularOut = clamp(angularPID.update(angularError, dt), -p.maxSpeed, p.maxSpeed);
 
-            if (std::fabs(error) > lateralSettings.smallError && std::fabs(lateralRaw) < p.minSpeed) {
+            if (std::fabs(error) > lat.smallError && std::fabs(lateralRaw) < p.minSpeed) {
                 lateralRaw = p.minSpeed * sign(error);
             }
 
-            const double lateralOut = slew(lateralRaw, prevLateral, lateralSettings.slew, dt);
-            angularOut = slew(angularOut, prevAngular, angularSettings.slew, dt);
+            const double lateralOut = slew(lateralRaw, prevLateral, lat.slew, dt);
+            angularOut = slew(angularOut, prevAngular, ang.slew, dt);
             prevLateral = lateralOut;
             prevAngular = angularOut;
 

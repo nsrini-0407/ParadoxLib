@@ -48,6 +48,41 @@ struct ControllerSettings {
     }
 };
 
+// Per-motion override of a ControllerSettings. Any field left as NAN keeps the
+// chassis's configured value, so overriding only kP does not also reset the
+// exit conditions to struct defaults. Applies to that one motion only.
+//
+//   chassis.turnToHeading(90, 1000, {.angular = {.kP = 3, .kD = 25}});
+struct ControllerOverride {
+    double kP = NAN;
+    double kI = NAN;
+    double kD = NAN;
+    double windupRange = NAN;
+
+    double smallError        = NAN;
+    double smallErrorTimeout = NAN;
+    double largeError        = NAN;
+    double largeErrorTimeout = NAN;
+
+    double slew    = NAN;
+    double dFilter = NAN;
+
+    ControllerSettings applyTo(ControllerSettings base) const {
+        auto pick = [](double over, double& field) { if (!std::isnan(over)) field = over; };
+        pick(kP, base.kP);
+        pick(kI, base.kI);
+        pick(kD, base.kD);
+        pick(windupRange, base.windupRange);
+        pick(smallError, base.smallError);
+        pick(smallErrorTimeout, base.smallErrorTimeout);
+        pick(largeError, base.largeError);
+        pick(largeErrorTimeout, base.largeErrorTimeout);
+        pick(slew, base.slew);
+        pick(dFilter, base.dFilter);
+        return base;
+    }
+};
+
 // Stall detection. If the robot is far from target and not moving, the motion
 // has hit something. Exiting promptly is nearly always better than waiting
 // out the timeout in a match.
@@ -66,6 +101,8 @@ struct MoveToPointParams {
     double maxSpeed       = 100;    // percent
     double minSpeed       = 0;      // chaining: never drop below this, and exit at earlyExitRange
     double earlyExitRange = 0;      // inches; > 0 exits early WITHOUT braking (momentum carries)
+    ControllerOverride lateral{};   // per-motion PID / exit overrides
+    ControllerOverride angular{};
     bool   async          = false;
 };
 
@@ -80,6 +117,8 @@ struct MoveToPoseParams {
     double earlyExitRange  = 0;
     double lead            = 0.6;   // boomerang carrot distance factor, 0..1. Higher = wider arc
     double horizontalDrift = 2.0;   // cornering aggressiveness: ~2 all-omni, ~8 with traction wheels
+    ControllerOverride lateral{};   // per-motion PID / exit overrides
+    ControllerOverride angular{};
     bool   async           = false;
 };
 
@@ -87,6 +126,7 @@ struct TurnToHeadingParams {
     double maxSpeed       = 100;
     double minSpeed       = 0;      // floor to beat static friction on the last few degrees
     double earlyExitRange = 0;      // degrees
+    ControllerOverride angular{};   // per-motion PID / exit overrides
     bool   async          = false;
 };
 
@@ -103,6 +143,7 @@ struct SwingToHeadingParams {
     double maxSpeed       = 100;
     double minSpeed       = 0;
     double earlyExitRange = 0;      // degrees
+    ControllerOverride angular{};   // per-motion PID / exit overrides
     bool   async          = false;
 };
 
@@ -111,6 +152,8 @@ struct MoveDistanceParams {
     double minSpeed       = 0;
     double earlyExitRange = 0;
     double heading        = NAN;    // hold this heading (deg). NAN = hold whatever we start at
+    ControllerOverride lateral{};   // per-motion PID / exit overrides
+    ControllerOverride angular{};
     bool   async          = false;
 };
 
