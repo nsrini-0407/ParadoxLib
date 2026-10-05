@@ -19,6 +19,7 @@ extern pros::Rotation leftRotation;
 extern pros::Rotation rightRotation;
 extern pros::Rotation backRotation;
 extern pros::Rotation liftRotation;
+extern pros::IMU inertial;
 
 extern TrackingWheel leftWheel;
 extern TrackingWheel rightWheel;
@@ -36,6 +37,7 @@ extern bool flipperToggle;
 extern bool clawToggle;
 
 extern void moveLift(int targetLevel);
-extern void scorePin();
+extern void antiTipTask();
+extern void scoreControl();
 extern int autonselector;
 extern int r;

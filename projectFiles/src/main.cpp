@@ -116,6 +116,8 @@ void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
 	chassis.setBrakeMode(pros::MotorBrake::coast);   // driver feel; auton re-sets brake
 	uint32_t lastPrint = 0;
+	pros::Task antiTipTask(antiTipTask);
+	pros::Task scoreControlTask(scoreControl);
 
 	while (true) {
 		// const bool bench = !pros::competition::is_connected();

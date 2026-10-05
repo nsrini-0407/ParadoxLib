@@ -1,6 +1,7 @@
 #include "main.h"
 #include "pros/adi.h"
 #include "pros/rtos.hpp"
+#include "pros/imu.hpp"
 
 
 //Motors and sensors
@@ -23,6 +24,7 @@ TrackingWheel leftWheel (&leftRotation,  2, -1.625,  1.0, true);
 TrackingWheel rightWheel(&rightRotation, 2, +1.625,  1.0, true);
 TrackingWheel backWheel (&backRotation,  2, +2.0, 1.0, true);
 
+pros::IMU inertial(11);
 IMU imu(11);
 
 pros::ADIDigitalOut claw ('A');
@@ -88,13 +90,31 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
 		}
     }
 
-    void scorePin() {
-        liftMotors.move_voltage(-6000);
-        pros::delay(350);
-        liftMotors.brake();
-        claw.set_value(false);
-        pros::delay(300);
-        liftMotors.move_voltage(8000);
-        pros::delay(300);
-        liftMotors.brake();
+    void scoreControl() {
+        while (true) {
+            if (master.get_digital_new_press(DIGITAL_R2)) {   
+                liftMotors.move_voltage(-6000);
+                pros::delay(350);
+                liftMotors.brake();
+                claw.set_value(true);
+                pros::delay(300);
+                liftMotors.move_voltage(8000);
+                pros::delay(300);
+                liftMotors.brake();
+            }
+            pros::delay(10);
+        }
+    }
+
+    void antiTipTask() {
+        while (true) {
+            if (inertial.get_pitch() > 15) {
+                liftMotors.move_voltage(-12000);
+            } else if (inertial.get_pitch() < -15) {
+                liftMotors.move_voltage(12000);
+            } else {
+                liftMotors.brake();
+            }
+            pros::delay(10);
+        }
     }
