@@ -44,71 +44,8 @@ void competition_initialize() {}
 	
 
 void autonomous() {
-	gui::forceSelectAuton("Left WP");
+	gui::forceSelectAuton("Skills");
 	gui::runSelectedAuton();
-	
-	// chassisMotors.move(-75);
-	// pros::delay(1100);
-	// // chassis.moveToPose(23, -14.5, -90, 2500, {.forwards = false});
-	// liftMotors.move_voltage(-12000);
-	// pros::delay(350);
-	// liftMotors.brake();
-	// claw.set_value(true);
-
-	// chassis.setPose(0,0,0);
-	// roller.move(-127);
-	// pros::delay(500);
-	// roller.brake();
-	// chassis.moveToPoint(0 ,-15.5, 1200, {.forwards = false, .minSpeed = 7.5 , .earlyExitRange = 1});
-	// chassis.turnToHeading(90, 1200, {.minSpeed = 15, .earlyExitRange = 0.5});
-	// chassis.moveToPoint(-14.5, -15.5, 1000, {.forwards = false, .async = true});
-	// liftMotors.move_voltage(12000);
-	// pros::delay(300);
-	// liftMotors.brake();
-	// chassis.waitUntilDone();
-	// claw.set_value(true);
-	// pros::delay(175);
-	// chassis.moveToPoint(-6, -15.5, 1000, {.async = true});
-	// liftMotors.move_voltage(-8000);
-	// pros::delay(350);
-	// liftMotors.brake();
-	// chassis.waitUntilDone();
-	// chassis.turnToHeading(145, 750, {.earlyExitRange = 0.5});
-	// chassisMotors.move(-31.5);
-	// pros::delay(1200);
-	// chassisMotors.brake();
-	// claw.set_value(false);
-	// pros::delay(175);
-	// chassis.turnToHeading(135, 800);
-	// chassis.moveToPoint(-3.5, -13.5, 1000, {.async = true});
-	// pros::delay(250);
-	// liftMotors.move_voltage(12000);
-	// pros::delay(500);
-	// liftMotors.brake();
-	// chassis.waitUntilDone();
-	// chassis.turnToHeading(90, 1000);
-	// chassis.moveToPoint(-14, -15, 1200, {.forwards = false});
-	// liftMotors.move_voltage(-12000);
-	// pros::delay(175);
-	// claw.set_value(true);
-	// liftMotors.brake();
-	// chassis.moveToPoint(-6.5, -15, 1000, {.async = true});
-	// liftMotors.move_voltage(-12000);
-	// pros::delay(200);
-	// liftMotors.brake();
-	// chassis.waitUntilDone();
-	// chassis.turnToHeading(30, 1000);
-	// chassis.moveToPoint(-16.5, -32.5, 1200, {.forwards = false});
-	// claw.set_value(false);
-	// pros::delay(175);
-	// chassis.turnToHeading(-124, 1000, {.async = true});
-	// liftMotors.move_voltage(12000);
-	// pros::delay(750);
-	// liftMotors.brake();
-	// chassis.waitUntilDone();
-	// chassis.moveToPose(23, -15, -90, 2000, {.forwards = false});
-
-
 }
 
 void opcontrol() {
@@ -116,7 +53,6 @@ void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
 	chassis.setBrakeMode(pros::MotorBrake::coast);   // driver feel; auton re-sets brake
 	uint32_t lastPrint = 0;
-	pros::Task antiTipTask(antiTipTask);
 	pros::Task scoreControlTask(scoreControl);
 
 	while (true) {
@@ -157,9 +93,6 @@ void opcontrol() {
 			roller.move_voltage(-12000);
 		} else {
 			roller.brake();
-		}
-		if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
-			scorePin();
 		}
 
 		//create the boolean toggle to control the states
