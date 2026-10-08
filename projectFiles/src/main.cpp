@@ -85,7 +85,7 @@ void opcontrol() {
                 //normal intake
                 liftMotors.move_voltage(12000);
             }else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
-                liftMotors.move_voltage(-12000);
+                liftMotors.move_voltage(-6000);
             } else {
                 liftMotors.brake();
             }

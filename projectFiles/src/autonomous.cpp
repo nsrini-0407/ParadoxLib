@@ -23,7 +23,7 @@ void leftAuton(Chassis& chassis) {
 		liftMotors.brake();
 		claw.set_value(true);
 		pros::delay(200);
-		chassis.moveToPoint(-6.5, -14.5, 750);
+		chassis.moveToPoint(-6, -14.5, 750);
 		chassis.turnToHeading(146, 950, {.earlyExitRange = 0.5});
 		chassisMotors.move(-37.5);
 		pros::delay(1200);
@@ -84,7 +84,7 @@ void rightAuton(Chassis& chassis) {
 		liftMotors.brake();
 		claw.set_value(true);
 		pros::delay(200);
-		chassis.moveToPoint(-6.5*r, -14.5, 750);
+		chassis.moveToPoint(-6*r, -14.5, 750);
 		chassis.turnToHeading(146*r, 950, {.earlyExitRange = 0.5});
 		chassisMotors.move(-37.5);
 		pros::delay(1200);
@@ -134,7 +134,7 @@ void skillsAuton(Chassis& chassis) {
 		roller.move(-127);
 		pros::delay(500);
 		roller.brake();
-		chassis.moveToPoint(0 ,-14.5, 1200, {.forwards = false, .minSpeed = 7.5 , .earlyExitRange = 1});
+		chassis.moveToPoint(0,-14.5, 1200, {.forwards = false, .minSpeed = 7.5 , .earlyExitRange = 1});
 		chassis.turnToHeading(90, 1200, {.minSpeed = 15, .earlyExitRange = 0.5});
 		chassis.moveToPoint(-13.5, -14.5, 750, {.forwards = false, .async = true});
 		liftMotors.move_voltage(12000);
@@ -146,7 +146,7 @@ void skillsAuton(Chassis& chassis) {
 		liftMotors.brake();
 		claw.set_value(true);
 		pros::delay(200);
-		chassis.moveToPoint(-6.5, -14.5, 750);
+		chassis.moveToPoint(-5.5, -14.5, 750);
 		chassis.turnToHeading(146, 950, {.earlyExitRange = 0.5});
 		chassisMotors.move(-37.5);
 		pros::delay(1200);
@@ -166,121 +166,68 @@ void skillsAuton(Chassis& chassis) {
 		pros::delay(175);
 		claw.set_value(true);
 		liftMotors.brake();
-		chassis.moveToPoint(-6.5, -13, 1000, {.async = true});
+		chassis.moveToPoint(-6, -13, 1000, {.async = true});
 		liftMotors.move_voltage(-12000);
 		pros::delay(200);
 		liftMotors.brake();
 		chassis.waitUntilDone();
-		chassis.turnToHeading(30, 700, {.minSpeed = 5, .earlyExitRange = 0.15});
-		chassis.moveToPoint(-16.5, -32.5, 1200, {.forwards = false});
+		chassis.turnToHeading(27, 700, {.minSpeed = 5, .earlyExitRange = 0.15});
+		chassis.moveToPoint(-15.5, -32, 1200, {.forwards = false});
 		claw.set_value(false); //grab second cup 
 		pros::delay(175);
 		liftMotors.move_voltage(12000);
-		pros::delay(1000);
+		pros::delay(300);
         liftMotors.brake();
         chassis.turnToHeading(163, 1000);
-        chassis.moveToPoint(-17.5, -19.5, 1200, {.forwards = false});
+		liftMotors.move_voltage(12000);
+		pros::delay(700);
+		liftMotors.brake();
+        chassis.moveToPoint(-17.5, -19.5, 1200, {.forwards = false, .maxSpeed = 30});
         liftMotors.move_voltage(-6000);
         pros::delay(300);
         liftMotors.brake();
         claw.set_value(true); //second cup down
         pros::delay(350);
-        chassis.moveToPoint(-17.5, -34, 1500);
+        chassis.moveToPoint(-17.5, -34, 1500, {.maxSpeed = 30});
         liftMotors.move_voltage(-12000);
-        pros::delay(250);
+        pros::delay(400);
         liftMotors.brake();
         chassis.turnToHeading(50, 1000);
-        chassis.moveToPoint(16.5, -4, 2000);
-        chassis.swingToHeading(115, DriveSide::RIGHT, 1200);
-        chassis.moveToPoint(63, -19, 1500, {.maxSpeed = 50});
-        chassis.turnToHeading(180, 1200);
+        chassis.moveToPoint(16.5, -4, 4000, {.lateral = {.kP = 5.85}});
+        chassis.swingToHeading(90, DriveSide::RIGHT, 1500);
+		chassis.moveToPoint(35, -4, 3000);
+		chassis.turnToHeading(135, 1200);
+		liftMotors.move(120000);
+		pros::delay(350);
+		liftMotors.brake();
+        chassis.moveToPoint(64, -19, 4000, {.maxSpeed = 30});
+        chassis.turnToHeading(180, 1200, {.async = true});
+		liftMotors.move(-9000);
+		pros::delay(350);
+		liftMotors.brake();
 		claw.set_value(false); //grab third cup
 		pros::delay(250);
-        chassis.moveToPoint(63, 0, 1200, {.forwards = false});
+        chassis.moveToPoint(63.5, 3, 1200, {.forwards = false});
 		pros::delay(1000);
-		chassis.moveToPoint(62, -16, 1200, {.async = true});
+		chassis.moveToPoint(64, -12.5, 4000, {.async = true});
 		liftMotors.move_voltage(12000);
 		pros::delay(200);
 		liftMotors.brake();
 		chassis.waitUntilDone();
 		chassis.turnToHeading(90, 1200);
-		liftMotors.move_voltage(120000);
-		pros::delay(600);
-		chassis.moveToPoint(35, -16, 1500, {.forwards = false, .maxSpeed = 30});
-		liftMotors.move_voltage(-10000);
-		pros::delay(600);
+		liftMotors.move_voltage(9000);
+		pros::delay(250);
 		liftMotors.brake();
-		claw.set_value(true);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        // chassis.turnToHeading(135, 1200);
-        // chassis.moveToPoint(-56, -4.5, 3000, {.forwards = false, .lateral = {.kP = 5.5}});
-
-
-        // chassis.turnToHeading(180, 1200);
-        // chassis.moveToPoint(-56, 0, 1500, {.forwards = false});
-        // claw.set_value(false);
-        // pros::delay(350);
-        // liftMotors.move_voltage(12000);
-        // pros::delay(275);
-        // liftMotors.brake();
-        // chassis.moveToPoint(-55, -14, 1500);
-        // chassis.turnToHeading(-90, 1200);
-        // liftMotors.move_voltage(12000);
-        // pros::delay(950);
-        // liftMotors.brake();
-        // chassis.moveToPoint(-26, -14.5, 5000, {.forwards = false, .maxSpeed = 30});
-        // liftMotors.move_voltage(-6000);
-        // pros::delay(300);
-        // liftMotors.brake();
-        // claw.set_value(true);
-        // pros::delay(350);
-
-        // chassis.moveToPoint(-56, -14, 1500, {.maxSpeed = 30, .lateral = {.kP = 5.5}});
-        // liftMotors.move_voltage(-8000);
-        // pros::delay(750);
-        // liftMotors.brake();
-        // chassis.turnToHeading(180, 1200);
-        // chassis.moveToPoint(-56, 0, 1500, {.forwards = false});
-        // claw.set_value(false);
-        // pros::delay(350);
-        // liftMotors.move_voltage(12000);
-        // pros::delay(275);
-        // liftMotors.brake();
-        // chassis.moveToPoint(-55, -14, 1500);
-        // chassis.turnToHeading(-90, 1200);
-        // liftMotors.move_voltage(12000);
-        // pros::delay(1000);
-        // chassis.moveToPoint(-26, -14.5, 5000, {.forwards = false, .maxSpeed = 30});
-        // liftMotors.move_voltage(-6000);
-        // pros::delay(300);
-        // liftMotors.brake();
-        // claw.set_value(true);
-
-        // chassis.moveToPoint(-50, -14.5, 1200);
-        // liftMotors.move_voltage(-8000);
-        // pros::delay(1000);
-        // liftMotors.brake();
-        // chassis.turnToHeading(-135, 1200);
-        // chassis.moveToPoint(-17, -2, 1500, {.forwards = false, .minSpeed = 50, .earlyExitRange = 2, .lateral = {.kP = 5.5}});
-        // chassis.moveToPoint(25, -6, 1500, {.forwards = false, .minSpeed = 50, .earlyExitRange = 2, .lateral = {.kP = 5.5}});
-
-
+		chassis.moveToPoint(35, -12.5, 1500, {.forwards = false});
+		liftMotors.set_brake_mode_all(pros::MotorBrake::coast);
+		liftMotors.brake();
+		liftMotors.move(0);
+		pros::delay(350);
+		claw.set_value(true); //release third cup
+		pros::delay(250);
+		// chassis.moveToPoint(64, -20, 1500);
+		// chassis.turnToHeading(180, 1200);
+		// chassis.moveToPoint(64, 3, 1200, {.forwards = false});
+		
 
 }
