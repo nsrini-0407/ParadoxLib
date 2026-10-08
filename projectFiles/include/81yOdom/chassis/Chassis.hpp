@@ -193,6 +193,8 @@ class Chassis {
         // Manual drive (percent, -100..100) 
         void tank(double left, double right);
         void arcade(double throttle, double turn);
+        bool setArcadeMaxSpeed(double maxSpeed);
+        double getArcadeMaxSpeed() const { return arcadeMaxSpeed; }
         void brake();
         void setBrakeMode(pros::MotorBrake mode);
 
@@ -238,6 +240,7 @@ class Chassis {
         PID lateralPID;
         PID angularPID;
         Odom odom;
+        double arcadeMaxSpeed = 100.0;
 
         std::atomic<bool>   motionRunning{false};
         std::atomic<bool>   cancelRequested{false};

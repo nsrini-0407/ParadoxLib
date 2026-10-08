@@ -37,5 +37,6 @@ extern bool clawToggle;
 
 extern void moveLift(int targetLevel);
 extern void scoreControl();
+extern void liftControl();
 extern int autonselector;
 extern int r;

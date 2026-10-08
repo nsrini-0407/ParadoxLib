@@ -33,6 +33,8 @@ bool flipperToggle = false;
 bool clawToggle = false;
 int autonselector = 1;
 int r = -1;
+double currPitch = 0;
+bool correction = false;
 
 
 //Odom configuration settings
@@ -99,6 +101,29 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
                 pros::delay(250);
                 liftMotors.move_voltage(8000);
                 pros::delay(450);
+                liftMotors.brake();
+            }
+            pros::delay(10);
+        }
+    }
+
+    void liftControl() { 
+        while (true) {
+            currPitch = imu.raw().get_roll();
+            if (currPitch > 10 || currPitch < -10) {
+                correction = true;
+                liftMotors.move_voltage(-10000);
+                pros::delay(500);
+                liftMotors.brake();
+                correction = false;
+            } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1) && !correction) {
+                //normal intake
+                liftMotors.move_voltage(12000);
+                chassis.setArcadeMaxSpeed(60);
+            }else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2) && !correction) {
+                liftMotors.move_voltage(-6000);
+				chassis.setArcadeMaxSpeed(127);
+            } else {
                 liftMotors.brake();
             }
             pros::delay(10);

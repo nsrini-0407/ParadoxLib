@@ -1,5 +1,6 @@
 #include "81yOdom/chassis/Chassis.hpp"
 #include "81yOdom/utils/math.hpp"
+#include <algorithm>
 #include <cstdio>
 
 Chassis::Chassis(DrivetrainConfig drivetrain,
@@ -161,7 +162,23 @@ void Chassis::tank(double left, double right) {
 
 void Chassis::arcade(double throttle, double turn) {
     // CW-positive: positive turn = turn right = left side faster.
-    tank(throttle + turn, throttle - turn);
+    double left = throttle + turn;
+    double right = throttle - turn;
+    const double largestOutput = std::max(std::fabs(left), std::fabs(right));
+
+    if (largestOutput > arcadeMaxSpeed && largestOutput > 0.0) {
+        const double scale = arcadeMaxSpeed / largestOutput;
+        left *= scale;
+        right *= scale;
+    }
+
+    tank(left, right);
+}
+
+bool Chassis::setArcadeMaxSpeed(double maxSpeed) {
+    if (!std::isfinite(maxSpeed)) return false;
+    arcadeMaxSpeed = std::max(0.0, std::min(100.0, maxSpeed));
+    return true;
 }
 
 void Chassis::brake() {

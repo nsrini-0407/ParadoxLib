@@ -53,18 +53,9 @@ void opcontrol() {
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
 	chassis.setBrakeMode(pros::MotorBrake::coast);   // driver feel; auton re-sets brake
 	uint32_t lastPrint = 0;
-	pros::Task scoreControlTask(scoreControl);
+	pros::Task liftTask(liftControl);
 
 	while (true) {
-		// const bool bench = !pros::competition::is_connected();
-		// if (bench) {
-		// 	if (master.get_digital_new_press(DIGITAL_A))    { chassis.brake(); autonomous(); }
-		// 	if (master.get_digital_new_press(DIGITAL_B))    chassis.tuneDriveBalance();
-		// 	if (master.get_digital_new_press(DIGITAL_X))    chassis.checkWheelDirections(master);
-		// 	if (master.get_digital_new_press(DIGITAL_Y))    chassis.measureTrackingOffsets(master);
-		// 	if (master.get_digital_new_press(DIGITAL_UP))   chassis.measureWheelDiameter(master, 48);
-		// 	if (master.get_digital_new_press(DIGITAL_DOWN)) chassis.measureImuScalar(master, 5);
-		// }
 
 		//arcade driving 
 		const double throttle = master.get_analog(ANALOG_LEFT_Y)  * (100.0 / 127.0);
@@ -81,14 +72,6 @@ void opcontrol() {
 			       chassis.getOdom().isHeadingFromImu() ? "" : "   [heading from WHEELS - IMU down]");
 		}
 		//l1 - up 4 bar, l2 down 4bar, b claw, down flipper
-		if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
-                //normal intake
-                liftMotors.move_voltage(12000);
-            }else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
-                liftMotors.move_voltage(-6000);
-            } else {
-                liftMotors.brake();
-            }
 		if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
 			roller.move_voltage(-12000);
 		} else {
