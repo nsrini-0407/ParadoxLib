@@ -19,6 +19,7 @@ extern pros::Rotation leftRotation;
 extern pros::Rotation rightRotation;
 extern pros::Rotation backRotation;
 extern pros::Rotation liftRotation;
+extern pros::Optical optical;
 
 extern TrackingWheel leftWheel;
 extern TrackingWheel rightWheel;
@@ -34,9 +35,19 @@ extern Chassis chassis;
 
 extern bool flipperToggle;
 extern bool clawToggle;
+extern int autonselector;
+extern int r;
+extern double currRoll;
+extern double currPitch;
+extern bool correction;
+extern std::string color; 
+extern double redHue;
+extern double blueHue;
 
 extern void moveLift(int targetLevel);
-extern void scoreControl();
 extern void liftControl();
+extern void autoRoller(std::string team);
+
+
 extern int autonselector;
 extern int r;

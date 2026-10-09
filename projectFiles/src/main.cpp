@@ -37,6 +37,8 @@ void initialize() {
 		liftMotors.set_brake_mode_all(pros::MotorBrake::hold);
 		liftMotors.set_gearing_all(pros::MotorCartridge::red);
 		liftMotors.set_encoder_units_all(pros::E_MOTOR_ENCODER_ROTATIONS);
+		optical.set_led_pwm(100);
+		color = "Red";
 	}
 
 void disabled() {}
@@ -44,7 +46,7 @@ void competition_initialize() {}
 	
 
 void autonomous() {
-	gui::forceSelectAuton("Skills");
+	//gui::forceSelectAuton("Right WP");
 	gui::runSelectedAuton();
 }
 
@@ -54,6 +56,7 @@ void opcontrol() {
 	chassis.setBrakeMode(pros::MotorBrake::coast);   // driver feel; auton re-sets brake
 	uint32_t lastPrint = 0;
 	pros::Task liftTask(liftControl);
+	pros::Task rollTask([]{autoRoller(color);});
 
 	while (true) {
 
@@ -87,7 +90,8 @@ void opcontrol() {
 				claw.set_value(true);
 				clawToggle = true;
 			}
-		} else if (master.get_digital_new_press(DIGITAL_DOWN)) {
+		}
+		if (master.get_digital_new_press(DIGITAL_DOWN)) {
 			if (flipperToggle) {
 				flipper.set_value(false);
 				flipperToggle = false;

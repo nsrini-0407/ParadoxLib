@@ -19,6 +19,7 @@ pros::Rotation leftRotation(5);
 pros::Rotation rightRotation(6);
 pros::Rotation backRotation(20);
 pros::Rotation liftRotation(8);
+pros::Optical optical(18);
 
 TrackingWheel leftWheel (&leftRotation,  2, -1.625,  1.0, true);
 TrackingWheel rightWheel(&rightRotation, 2, +1.625,  1.0, true);
@@ -33,8 +34,12 @@ bool flipperToggle = false;
 bool clawToggle = false;
 int autonselector = 1;
 int r = -1;
+double currRoll = 0;
 double currPitch = 0;
 bool correction = false;
+std::string color; 
+double redHue = 20;
+double blueHue = 215;
 
 
 //Odom configuration settings
@@ -91,26 +96,11 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
 		}
     }
 
-    void scoreControl() {
-        while (true) {
-            if (master.get_digital_new_press(DIGITAL_R2)) {   
-                liftMotors.move_voltage(-10000);
-                pros::delay(500);
-                liftMotors.brake();
-                claw.set_value(true);
-                pros::delay(250);
-                liftMotors.move_voltage(8000);
-                pros::delay(450);
-                liftMotors.brake();
-            }
-            pros::delay(10);
-        }
-    }
-
     void liftControl() { 
         while (true) {
-            currPitch = imu.raw().get_roll();
-            if (currPitch > 10 || currPitch < -10) {
+            currRoll = imu.raw().get_roll();
+            currPitch = imu.raw().get_pitch();
+            if (currRoll > 10 || currRoll < -10 || currPitch > 10 || currPitch < -10) {
                 correction = true;
                 liftMotors.move_voltage(-10000);
                 pros::delay(500);
@@ -119,12 +109,37 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
             } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1) && !correction) {
                 //normal intake
                 liftMotors.move_voltage(12000);
-                chassis.setArcadeMaxSpeed(60);
+                chassis.setArcadeMaxSpeed(80);
             }else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2) && !correction) {
                 liftMotors.move_voltage(-6000);
 				chassis.setArcadeMaxSpeed(127);
             } else {
                 liftMotors.brake();
+            }
+            pros::delay(10);
+        }
+    }
+
+    void autoRoller(std::string team) {
+        while (true) {
+            if (master.get_digital(DIGITAL_R1)) {
+                if (team == "Red") {
+                    if (std::abs(optical.get_hue() - redHue) > 10) {
+                        roller.move_voltage(-12000);
+                    } else {
+                        roller.brake();
+                    }             
+                } else if (team == "Blue") {
+                    if (std::abs(optical.get_hue() - blueHue) > 10) {
+                        roller.move_voltage(-12000);
+                    } else {
+                        roller.brake();
+                    } 
+                }
+            } else if (master.get_digital(DIGITAL_R2)) {
+                roller.move_voltage(-12000);
+            } else {
+                roller.brake();
             }
             pros::delay(10);
         }
