@@ -26,7 +26,7 @@ void initialize() {
         {"Do Nothing",[](){}},
     });
 	gui::init();
-	// gui::forceSelectAuton("Skills");   // DEBUG: skip the touchscreen picker
+	gui::forceSelectAuton("Skills");   // DEBUG: skip the touchscreen picker
 
 	if (!chassis.calibrate()) {
 			printf("[robot] IMU FAILED to calibrate - check port 11 / reseat the sensor\n");
@@ -46,13 +46,14 @@ void competition_initialize() {}
 	
 
 void autonomous() {
-	//gui::forceSelectAuton("Right WP");
+	//gui::forceSelectAuton("Left WP");
 	gui::runSelectedAuton();
 }
 
 void opcontrol() {
 	
 	pros::Controller master(pros::E_CONTROLLER_MASTER);
+	liftMotors.set_brake_mode_all(pros::MotorBrake::hold);
 	chassis.setBrakeMode(pros::MotorBrake::coast);   // driver feel; auton re-sets brake
 	uint32_t lastPrint = 0;
 	pros::Task liftTask(liftControl);
@@ -74,23 +75,18 @@ void opcontrol() {
 			       (unsigned long)chassis.getOdom().getRejectedSamples(),
 			       chassis.getOdom().isHeadingFromImu() ? "" : "   [heading from WHEELS - IMU down]");
 		}
-		//l1 - up 4 bar, l2 down 4bar, b claw, down flipper
-		if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
-			roller.move_voltage(-12000);
-		} else {
-			roller.brake();
-		}
 
 		//create the boolean toggle to control the states
 		if (master.get_digital_new_press(DIGITAL_B)) { //if a new press is registered
 			if (clawToggle) { //if the claw is extended/true
 				claw.set_value(false); //close the claw piston
 				clawToggle = false; //update boolean accordingly
-			} else if (!flipperToggle) {//and vice versa! 
+			} else if (!clawToggle) {//and vice versa! 
 				claw.set_value(true);
 				clawToggle = true;
 			}
 		}
+
 		if (master.get_digital_new_press(DIGITAL_DOWN)) {
 			if (flipperToggle) {
 				flipper.set_value(false);
@@ -99,6 +95,31 @@ void opcontrol() {
 				flipper.set_value(true);
 				flipperToggle = true;
 			}
+		}
+
+		if (master.get_digital_new_press(DIGITAL_X)) {
+			chassis.setBrakeMode(pros::MotorBrake::hold);
+			chassis.brake();
+			rollTask.suspend();
+			liftTask.suspend();
+			roller.move(-127);
+			pros::delay(500);
+			roller.brake();
+			chassis.moveToPoint(0 ,-14.5, 1200, {.forwards = false, .minSpeed = 7.5 , .earlyExitRange = 1});
+			chassis.turnToHeading(90, 1200, {.minSpeed = 15, .earlyExitRange = 0.5});
+			chassis.moveToPoint(-13.5, -14.5, 750, {.forwards = false, .async = true});
+			liftMotors.move_voltage(12000);
+			pros::delay(175);
+			liftMotors.brake();
+			chassis.waitUntilDone();
+			liftMotors.move_voltage(-8000);
+			pros::delay(200);
+			liftMotors.brake();
+			claw.set_value(true);
+			pros::delay(200);
+			rollTask.resume();
+			liftTask.resume();
+			chassis.setBrakeMode(pros::MotorBrake::coast);
 		}
 		pros::delay(20);
 	}

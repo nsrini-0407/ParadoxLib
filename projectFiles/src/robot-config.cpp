@@ -39,7 +39,7 @@ double currPitch = 0;
 bool correction = false;
 std::string color; 
 double redHue = 20;
-double blueHue = 215;
+double blueHue = 210;
 
 
 //Odom configuration settings
@@ -124,13 +124,13 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
         while (true) {
             if (master.get_digital(DIGITAL_R1)) {
                 if (team == "Red") {
-                    if (std::abs(optical.get_hue() - redHue) > 10) {
+                    if (std::abs(optical.get_hue() - redHue) > 20) {
                         roller.move_voltage(-12000);
                     } else {
                         roller.brake();
                     }             
                 } else if (team == "Blue") {
-                    if (std::abs(optical.get_hue() - blueHue) > 10) {
+                    if (std::abs(optical.get_hue() - blueHue) > 20) {
                         roller.move_voltage(-12000);
                     } else {
                         roller.brake();
@@ -143,4 +143,22 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
             }
             pros::delay(10);
         }
+    }
+
+    void skillsStart() {
+		roller.move(-127);
+		pros::delay(500);
+		roller.brake();
+		chassis.moveToPoint(0 ,-14.5, 1200, {.forwards = false, .minSpeed = 7.5 , .earlyExitRange = 1});
+		chassis.turnToHeading(90, 1200, {.minSpeed = 15, .earlyExitRange = 0.5});
+		chassis.moveToPoint(-13.5, -14.5, 750, {.forwards = false, .async = true});
+		liftMotors.move_voltage(12000);
+		pros::delay(175);
+		liftMotors.brake();
+		chassis.waitUntilDone();
+		liftMotors.move_voltage(-8000);
+		pros::delay(200);
+		liftMotors.brake();
+		claw.set_value(true);
+		pros::delay(200);
     }

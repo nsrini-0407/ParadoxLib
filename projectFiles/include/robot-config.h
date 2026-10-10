@@ -47,6 +47,7 @@ extern double blueHue;
 extern void moveLift(int targetLevel);
 extern void liftControl();
 extern void autoRoller(std::string team);
+extern void skillsStart();
 
 
 extern int autonselector;
