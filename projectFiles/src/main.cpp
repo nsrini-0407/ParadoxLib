@@ -26,7 +26,7 @@ void initialize() {
         {"Do Nothing",[](){}},
     });
 	gui::init();
-	gui::forceSelectAuton("Skills");   // DEBUG: skip the touchscreen picker
+	gui::forceSelectAuton("Left WP");   // DEBUG: skip the touchscreen picker
 
 	if (!chassis.calibrate()) {
 			printf("[robot] IMU FAILED to calibrate - check port 11 / reseat the sensor\n");

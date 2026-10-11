@@ -40,6 +40,7 @@ bool correction = false;
 std::string color; 
 double redHue = 20;
 double blueHue = 210;
+bool runTip = true;
 
 
 //Odom configuration settings
@@ -100,7 +101,11 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
         while (true) {
             currRoll = imu.raw().get_roll();
             currPitch = imu.raw().get_pitch();
-            if (currRoll > 10 || currRoll < -10 || currPitch > 10 || currPitch < -10) {
+            if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_UP)) {
+                runTip = false;
+                correction = false;
+            }
+            if ((currRoll > 10 || currRoll < -10 || currPitch > 10 || currPitch < -10) && runTip) {
                 correction = true;
                 liftMotors.move_voltage(-10000);
                 pros::delay(500);
@@ -112,12 +117,12 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
                 chassis.setArcadeMaxSpeed(80);
             }else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2) && !correction) {
                 liftMotors.move_voltage(-6000);
-				chassis.setArcadeMaxSpeed(127);
+                chassis.setArcadeMaxSpeed(127);
             } else {
                 liftMotors.brake();
             }
-            pros::delay(10);
         }
+            pros::delay(10);
     }
 
     void autoRoller(std::string team) {
