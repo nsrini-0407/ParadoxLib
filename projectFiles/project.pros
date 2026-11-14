@@ -1,7 +1,7 @@
 {
   "py/object": "pros.conductor.project.Project",
   "py/state": {
-    "project_name": "redElims",
+    "project_name": "newcode",
     "target": "v5",
     "templates": {
       "kernel": {
@@ -593,7 +593,7 @@
     },
     "upload_options": {
       "description": "@yellow",
-      "slot": 7
+      "slot": 1
     },
     "use_early_access": false
   }

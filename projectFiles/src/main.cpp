@@ -7,14 +7,17 @@ LV_IMAGE_DECLARE(logo);
 
 static gui::OdomDebugData get_odom_debug_data() {
 	const Pose pose = chassis.getPose();
-	return {pose.x, pose.y, pose.theta};
+	// get_position() is centidegrees (same units moveLift uses); PROS_ERR means unplugged
+	const int32_t liftRaw = liftRotation.get_position();
+	const double lift = (liftRaw == PROS_ERR) ? NAN : (double)liftRaw;
+	return {pose.x, pose.y, pose.theta, lift};
 }
 
 void initialize() {
 	pros::lcd::initialize(); 
 	gui::setWatchedMotors({
-        {"L Front", &leftFrontMotor}, {"L Back", &leftBackMotor}, {"L Top", &leftTopMotor},
-        {"R Front", &rightFrontMotor}, {"R Back", &rightBackMotor}, {"R Top", &rightTopMotor},
+        {"L Front", &leftFrontMotor}, {"L Back", &leftBackMotor},
+        {"R Front", &rightFrontMotor}, {"R Back", &rightBackMotor},
         // {"Intake", &intakeMotor},   // once intakeMotor has a real port
     });
 	gui::setLogoImage(&logo);
@@ -39,6 +42,8 @@ void initialize() {
 		liftMotors.set_encoder_units_all(pros::E_MOTOR_ENCODER_ROTATIONS);
 		optical.set_led_pwm(100);
 		color = "Red";
+		chassis.setBrakeMode(pros::MotorBrake::hold);
+		chassis.setPose(0,0,0);
 	}
 
 void disabled() {}
@@ -58,6 +63,7 @@ void opcontrol() {
 	uint32_t lastPrint = 0;
 	pros::Task liftTask(liftControl);
 	pros::Task rollTask([]{autoRoller(color);});
+	pros::Task flipTask(flipperControl);
 
 	while (true) {
 
@@ -77,49 +83,42 @@ void opcontrol() {
 		}
 
 		//create the boolean toggle to control the states
-		if (master.get_digital_new_press(DIGITAL_B)) { //if a new press is registered
-			if (clawToggle) { //if the claw is extended/true
-				claw.set_value(false); //close the claw piston
-				clawToggle = false; //update boolean accordingly
-			} else if (!clawToggle) {//and vice versa! 
-				claw.set_value(true);
-				clawToggle = true;
+		// if (master.get_digital(DIGITAL_R1) || master.get_digital(DIGITAL_R2)) { //if a new press is registered
+		// 	if (master.get_digital(DIGITAL_R1)){
+		// 		claw.move_voltage(12000);
+		// 	}
+		// 	if (master.get_digital(DIGITAL_R2)){
+		// 		claw.move_voltage(-12000);
+		// 	}
+		// }
+
+		if (master.get_digital_new_press(DIGITAL_R1)) {
+			if (!CT1) {
+				claw.move_voltage(12000);
+				CT1 = true;
+				CT2 = false;
+			} else if (CT1) {
+				claw.move_voltage(4000);
+				CT1 = false;
+				CT2 = false;
 			}
 		}
-
-		if (master.get_digital_new_press(DIGITAL_DOWN)) {
-			if (flipperToggle) {
-				flipper.set_value(false);
-				flipperToggle = false;
-			} else if (!flipperToggle) {
-				flipper.set_value(true);
-				flipperToggle = true;
+		if (master.get_digital_new_press(DIGITAL_R2)) {
+			if (!CT2) {
+				claw.move_voltage(-12000);
+				CT2 = true;
+				CT1 = false;
+			} else if (CT2) {
+				claw.move_voltage(4000);
+				CT2 = false;
+				CT1 = false;
 			}
 		}
-
-		if (master.get_digital_new_press(DIGITAL_X)) {
-			chassis.setBrakeMode(pros::MotorBrake::hold);
-			chassis.brake();
-			rollTask.suspend();
-			liftTask.suspend();
-			roller.move(-127);
-			pros::delay(500);
-			roller.brake();
-			chassis.moveToPoint(0 ,-14.5, 1200, {.forwards = false, .minSpeed = 7.5 , .earlyExitRange = 1});
-			chassis.turnToHeading(90, 1200, {.minSpeed = 15, .earlyExitRange = 0.5});
-			chassis.moveToPoint(-13.5, -14.5, 750, {.forwards = false, .async = true});
-			liftMotors.move_voltage(12000);
-			pros::delay(175);
-			liftMotors.brake();
-			chassis.waitUntilDone();
-			liftMotors.move_voltage(-8000);
-			pros::delay(200);
-			liftMotors.brake();
-			claw.set_value(true);
-			pros::delay(200);
-			rollTask.resume();
-			liftTask.resume();
-			chassis.setBrakeMode(pros::MotorBrake::coast);
+		if (master.get_digital_new_press(DIGITAL_Y)) {
+			intake.move_voltage(12000);
+		}
+		if (master.get_digital_new_press(DIGITAL_RIGHT)) {
+			intake.move_voltage(-12000);
 		}
 		pros::delay(20);
 	}

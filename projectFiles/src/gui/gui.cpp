@@ -2,6 +2,7 @@
 #include "liblvgl/lvgl.h"
 #include "pros/misc.hpp"
 #include "pros/rtos.hpp"
+#include <cmath>
 #include <cstdio>
 
 namespace gui {
@@ -112,7 +113,7 @@ static void build_home_tab(lv_obj_t* tab) {
     lv_obj_align(lbl_battery, LV_ALIGN_TOP_RIGHT, -10, 70);
 
     lbl_odom = lv_label_create(tab);
-    lv_label_set_text(lbl_odom, "ODOM\nX: -- in\nY: -- in\nH: -- deg");
+    lv_label_set_text(lbl_odom, "ODOM\nX: -- in\nY: -- in\nH: -- deg\nLift: -- cdeg");
     lv_obj_align(lbl_odom, LV_ALIGN_TOP_RIGHT, -10, 100);
 }
 
@@ -231,10 +232,13 @@ static void telemetry_timer_cb(lv_timer_t*) {
 
     if (g_odom_debug_provider && lbl_odom) {
         const OdomDebugData pose = g_odom_debug_provider();
-        char odom_text[80];
+        char lift_text[24];
+        if (std::isfinite(pose.lift)) snprintf(lift_text, sizeof(lift_text), "%.0f cdeg", pose.lift);
+        else                          snprintf(lift_text, sizeof(lift_text), "DISCONNECTED");
+        char odom_text[112];
         snprintf(odom_text, sizeof(odom_text),
-                 "ODOM\nX: %.2f in\nY: %.2f in\nH: %.2f deg",
-                 pose.x, pose.y, pose.heading);
+                 "ODOM\nX: %.2f in\nY: %.2f in\nH: %.2f deg\nLift: %s",
+                 pose.x, pose.y, pose.heading, lift_text);
         lv_label_set_text(lbl_odom, odom_text);
     }
 

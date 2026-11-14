@@ -6,32 +6,37 @@
 
 //Motors and sensors
 pros::Controller master(pros::E_CONTROLLER_MASTER);
-pros::MotorGroup leftMotors({-8,-9,-10});
-pros::MotorGroup rightMotors({1,2,3});
-pros::MotorGroup chassisMotors({-8,-9,-10,1,2,3});
-pros::MotorGroup liftMotors({4,-7});
-pros::Motor roller(19);
+pros::MotorGroup leftMotors({-19,-20});
+pros::MotorGroup rightMotors({17,18});
+pros::MotorGroup chassisMotors({17, 18, -19, -20});
+pros::MotorGroup liftMotors({-1,2});
+pros::Motor roller(3);
+pros::Motor claw(-4);
+pros::Motor intake(7);
+pros::Motor flipper(5);
+//2223
+//2707
 
-pros::Motor leftFrontMotor(-8), leftBackMotor(-9),  leftTopMotor(-10);
-pros::Motor rightFrontMotor(1), rightBackMotor(2), rightTopMotor(3);
 
-pros::Rotation leftRotation(5);
-pros::Rotation rightRotation(6);
-pros::Rotation backRotation(20);
-pros::Rotation liftRotation(8);
-pros::Optical optical(18);
+pros::Motor leftFrontMotor(-19), leftBackMotor(-20);
+pros::Motor rightFrontMotor(17), rightBackMotor(18);
 
-TrackingWheel leftWheel (&leftRotation,  2, -1.625,  1.0, true);
-TrackingWheel rightWheel(&rightRotation, 2, +1.625,  1.0, true);
-TrackingWheel backWheel (&backRotation,  2, +2.0, 1.0, true);
+pros::Rotation leftRotation(15);
+pros::Rotation rightRotation(16);
+pros::Rotation backRotation(14);
+pros::Rotation liftRotation(6);
+pros::Optical optical(13);
 
-IMU imu(11);
+TrackingWheel leftWheel (&leftRotation,  2, -1.5,  1.0, false);
+TrackingWheel rightWheel(&rightRotation, 2, +1.5,  1.0, false);
+TrackingWheel backWheel (&backRotation,  2, -1.25, 1.0, false);
 
-pros::ADIDigitalOut claw ('A');
-pros::ADIDigitalOut flipper ('B');
+IMU imu(21);
+
 
 bool flipperToggle = false;
-bool clawToggle = false;
+bool CT1 = false;
+bool CT2 = false;
 int autonselector = 1;
 int r = -1;
 double currRoll = 0;
@@ -41,22 +46,24 @@ std::string color;
 double redHue = 20;
 double blueHue = 210;
 bool runTip = true;
+double liftVelocity = 0;
+const double DOWN = 0;
 
 
 //Odom configuration settings
 ControllerSettings lateralSettings {
-    .kP = 7,  .kI = 0,  .kD = 1.05,
+    .kP = 8.85,  .kI = 0,  .kD = 1.35,
     .windupRange       = 3.0,
-    .smallError        = 0.5,   .smallErrorTimeout = 75,
-    .largeError        = 2.0,   .largeErrorTimeout = 125,
+    .smallError        = 1,   .smallErrorTimeout = 75,
+    .largeError        = 2.15,   .largeErrorTimeout = 150,
     .slew              = 300,   // percent per second. 0 disables the ramp
     .dFilter           = 0.715,
 };
 ControllerSettings angularSettings {
-    .kP = 2.2,  .kI = 0.0,  .kD = 0.25,
+    .kP = 2.675,  .kI = 0.0,  .kD = 0.215,
     .windupRange       = 10.0,
-    .smallError        = 0.5,   .smallErrorTimeout = 50,
-    .largeError        = 1.0,   .largeErrorTimeout = 75,
+    .smallError        = 1,   .smallErrorTimeout = 50,
+    .largeError        = 1.25,   .largeErrorTimeout = 75,
     .slew              = 0,
     .dFilter           = 0.75,
 };
@@ -74,23 +81,25 @@ Chassis chassis(
 
 //This is a simplified PD loop for controlling the double reverse 4 bar to different level stages up and down 
 // for stacking, flipping toggles, etc. - PD helps with keeping movements balanced and precise
-void moveLift(int targetLevel) { //accepts the number of levels to move up/down as a parameter - sets the target position for the lift to move to
-        const double kp = 8.25; //tuned kP constant
-        const double stageConstant = 45; //each stage is 45 degrees apart, so we can use this to calculate the target position for each level
+void moveLift(double targetLevel) { //accepts the number of levels to move up/down as a parameter - sets the target position for the lift to move to
+        const double kp = 9; //tuned kP constant
 		double error; 
 		double velocity;     
-        const double exitNet = 3; //degrees of error that we will accept as "close enough" to the target position
+        const double exitNet = 750; //degrees of error that we will accept as "close enough" to the target positionerror = targetLevel - liftRotation.get_position();
+        error = std::abs(targetLevel - liftRotation.get_position());
 		while (true) {
             //if the difference between the target position and the current position is less than the exitNet, we are close enough to the target position and can stop moving the lift
-			if (std::abs((targetLevel * stageConstant) - liftRotation.get_position()) < exitNet) { 
+			if (error < exitNet) { 
 				liftMotors.brake();
             //if this isn't the case, we move to the target using the PD loop to adjust velocity in real time based on the error 
-			} else if (std::abs((targetLevel * stageConstant) - liftRotation.get_position()) > exitNet) {
-				while (std::abs((targetLevel * stageConstant) - liftRotation.get_position()) > exitNet) {
-					error = (targetLevel * stageConstant) - liftRotation.get_position();
+			} else if (error > exitNet) {
+				while (error > exitNet) {
+					error = std::abs(targetLevel - liftRotation.get_position());
 					velocity = kp*error;
 					liftMotors.move_voltage(velocity);	
+                    pros::delay(10); //delay to save resources
 				}
+                pros::delay(10);
 				
 			}
 			pros::delay(10); //delay to save resources
@@ -101,6 +110,7 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
         while (true) {
             currRoll = imu.raw().get_roll();
             currPitch = imu.raw().get_pitch();
+            liftVelocity = liftMotors.get_actual_velocity_all().at(0);  
             if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_UP)) {
                 runTip = false;
                 correction = false;
@@ -116,18 +126,25 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
                 liftMotors.move_voltage(12000);
                 chassis.setArcadeMaxSpeed(80);
             }else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2) && !correction) {
-                liftMotors.move_voltage(-6000);
-                chassis.setArcadeMaxSpeed(127);
+                if (liftRotation.get_position() < 2850) {
+                    liftMotors.brake();
+                } else {
+                    liftMotors.move_voltage(-9000);
+                    chassis.setArcadeMaxSpeed(127);
+                }
+                // if (liftVelocity < 20) {
+                //     roller.move_voltage(-12000);
+                // }
             } else {
                 liftMotors.brake();
             }
-        }
             pros::delay(10);
+        }
     }
 
     void autoRoller(std::string team) {
         while (true) {
-            if (master.get_digital(DIGITAL_R1)) {
+            if (master.get_digital(DIGITAL_B)) {
                 if (team == "Red") {
                     if (std::abs(optical.get_hue() - redHue) > 20) {
                         roller.move_voltage(-12000);
@@ -141,9 +158,8 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
                         roller.brake();
                     } 
                 }
-            } else if (master.get_digital(DIGITAL_R2)) {
-                roller.move_voltage(-12000);
-            } else {
+            }
+            else {
                 roller.brake();
             }
             pros::delay(10);
@@ -164,6 +180,22 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
 		liftMotors.move_voltage(-8000);
 		pros::delay(200);
 		liftMotors.brake();
-		claw.set_value(true);
+		// claw.set_value(true);
 		pros::delay(200);
+    }
+
+
+    void flipperControl() {
+        while (true) {
+            if (master.get_digital_new_press(DIGITAL_DOWN)) {
+                flipper.move_voltage(-12000);
+                pros::delay(550);
+                flipper.brake();
+                pros::delay(300);
+                flipper.move_voltage(12000);
+                pros::delay(550);
+                flipper.brake();
+            }
+            pros::delay(10);
+        }
     }

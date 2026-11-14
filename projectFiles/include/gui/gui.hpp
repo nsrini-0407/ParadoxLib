@@ -45,6 +45,7 @@ struct OdomDebugData {
     double x;
     double y;
     double heading;
+    double lift;      // lift rotation sensor, centidegrees (NAN if unplugged)
 };
 
 using OdomDebugProvider = OdomDebugData (*)();
