@@ -6,30 +6,35 @@
 
 //Motors and sensors
 pros::Controller master(pros::E_CONTROLLER_MASTER);
-pros::MotorGroup leftMotors({-19,-20});
-pros::MotorGroup rightMotors({17,18});
-pros::MotorGroup chassisMotors({17, 18, -19, -20});
-pros::MotorGroup liftMotors({-1,2});
-pros::Motor roller(3);
-pros::Motor claw(-4);
-pros::Motor intake(7);
-pros::Motor flipper(5);
+pros::MotorGroup leftMotors({1,2});
+pros::MotorGroup rightMotors({-8,-9});
+pros::MotorGroup chassisMotors({-8, -9, 1, 2});
+pros::MotorGroup liftMotors({12,-13});
+pros::MotorGroup roller({3, -20});
+pros::Motor claw(-17);
 //2223
 //2707
 
+pros::Motor leftFrontMotor(1);
+pros::Motor leftBackMotor(2);
+pros::Motor rightFrontMotor(-8);
+pros::Motor rightBackMotor(-9);
 
-pros::Motor leftFrontMotor(-19), leftBackMotor(-20);
-pros::Motor rightFrontMotor(17), rightBackMotor(18);
 
 pros::Rotation leftRotation(15);
-pros::Rotation rightRotation(16);
-pros::Rotation backRotation(14);
-pros::Rotation liftRotation(6);
-pros::Optical optical(13);
+pros::Rotation rightRotation(14);
+pros::Rotation backRotation(19);
+pros::Rotation liftRotation(16);
+pros::Optical optical(7);
+pros::Distance clampDistance(11);
+pros::Distance backRightDist(4);
+pros::Distance frontRightDist(6);
+pros::Distance backSideDist(5);
 
-TrackingWheel leftWheel (&leftRotation,  2, -1.5,  1.0, false);
-TrackingWheel rightWheel(&rightRotation, 2, +1.5,  1.0, false);
-TrackingWheel backWheel (&backRotation,  2, -1.25, 1.0, false);
+
+TrackingWheel leftWheel (&leftRotation,  2, -1.5,  1.0, true);
+TrackingWheel rightWheel(&rightRotation, 2, +1.5,  1.0, true);
+TrackingWheel backWheel (&backRotation,  2, -1.25, 1.0, true);
 
 IMU imu(21);
 
@@ -52,20 +57,20 @@ const double DOWN = 0;
 
 //Odom configuration settings
 ControllerSettings lateralSettings {
-    .kP = 8.85,  .kI = 0,  .kD = 1.35,
+    .kP = 20,  .kI = 0,  .kD = 3.25,
     .windupRange       = 3.0,
-    .smallError        = 1,   .smallErrorTimeout = 75,
-    .largeError        = 2.15,   .largeErrorTimeout = 150,
+    .smallError        = 0.75,   .smallErrorTimeout = 125,
+    .largeError        = 2.5,   .largeErrorTimeout = 450,
     .slew              = 300,   // percent per second. 0 disables the ramp
-    .dFilter           = 0.715,
+    .dFilter           = 0,
 };
 ControllerSettings angularSettings {
-    .kP = 2.675,  .kI = 0.0,  .kD = 0.215,
+    .kP = 0,  .kI = 0.0,  .kD = 0,
     .windupRange       = 10.0,
-    .smallError        = 1,   .smallErrorTimeout = 50,
-    .largeError        = 1.25,   .largeErrorTimeout = 75,
+    .smallError        = 1.25,   .smallErrorTimeout = 125,
+    .largeError        = 3.5,   .largeErrorTimeout = 450,
     .slew              = 0,
-    .dFilter           = 0.75,
+    .dFilter           = 0 ,
 };
 
 Chassis chassis(
@@ -117,14 +122,18 @@ void moveLift(double targetLevel) { //accepts the number of levels to move up/do
             }
             if ((currRoll > 10 || currRoll < -10 || currPitch > 10 || currPitch < -10) && runTip) {
                 correction = true;
-                liftMotors.move_voltage(-10000);
-                pros::delay(500);
+                liftMotors.move_voltage(-12000);
+                pros::delay(600);
                 liftMotors.brake();
                 correction = false;
             } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1) && !correction) {
                 //normal intake
-                liftMotors.move_voltage(12000);
-                chassis.setArcadeMaxSpeed(80);
+                if (liftRotation.get_position() > 11750) {
+                    liftMotors.brake();
+                } else {
+                    liftMotors.move_voltage(12000);
+                    chassis.setArcadeMaxSpeed(80);
+                }
             }else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2) && !correction) {
                 if (liftRotation.get_position() < 2850) {
                     liftMotors.brake();
@@ -147,13 +156,13 @@ void moveLift(double targetLevel) { //accepts the number of levels to move up/do
             if (master.get_digital(DIGITAL_B)) {
                 if (team == "Red") {
                     if (std::abs(optical.get_hue() - redHue) > 20) {
-                        roller.move_voltage(-12000);
+                        roller.move_voltage(10500);
                     } else {
                         roller.brake();
                     }             
                 } else if (team == "Blue") {
                     if (std::abs(optical.get_hue() - blueHue) > 20) {
-                        roller.move_voltage(-12000);
+                        roller.move_voltage(10500);
                     } else {
                         roller.brake();
                     } 
@@ -170,32 +179,16 @@ void moveLift(double targetLevel) { //accepts the number of levels to move up/do
 		roller.move(-127);
 		pros::delay(500);
 		roller.brake();
-		chassis.moveToPoint(0 ,-14.5, 1200, {.forwards = false, .minSpeed = 7.5 , .earlyExitRange = 1});
-		chassis.turnToHeading(90, 1200, {.minSpeed = 15, .earlyExitRange = 0.5});
-		chassis.moveToPoint(-13.5, -14.5, 750, {.forwards = false, .async = true});
+		chassis.driveToPoint(0 ,-14.5, 1200, {.reverse = true, .speedFloor = 7.5 , .handoffRange = 1});
+		chassis.turnToAngle(90, 1200, {.speedFloor = 15, .handoffRange = 0.5});
+		chassis.driveToPoint(-13.5, -14.5, 750, {.reverse = true, .background = true});
 		liftMotors.move_voltage(12000);
 		pros::delay(175);
 		liftMotors.brake();
-		chassis.waitUntilDone();
+		chassis.waitForMotion();
 		liftMotors.move_voltage(-8000);
 		pros::delay(200);
 		liftMotors.brake();
 		// claw.set_value(true);
 		pros::delay(200);
-    }
-
-
-    void flipperControl() {
-        while (true) {
-            if (master.get_digital_new_press(DIGITAL_DOWN)) {
-                flipper.move_voltage(-12000);
-                pros::delay(550);
-                flipper.brake();
-                pros::delay(300);
-                flipper.move_voltage(12000);
-                pros::delay(550);
-                flipper.brake();
-            }
-            pros::delay(10);
-        }
     }

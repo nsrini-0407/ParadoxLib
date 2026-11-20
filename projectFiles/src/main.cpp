@@ -29,7 +29,7 @@ void initialize() {
         {"Do Nothing",[](){}},
     });
 	gui::init();
-	gui::forceSelectAuton("Left WP");   // DEBUG: skip the touchscreen picker
+	//gui::forceSelectAuton("Left WP");   // DEBUG: skip the touchscreen picker
 
 	if (!chassis.calibrate()) {
 			printf("[robot] IMU FAILED to calibrate - check port 11 / reseat the sensor\n");
@@ -51,7 +51,7 @@ void competition_initialize() {}
 	
 
 void autonomous() {
-	//gui::forceSelectAuton("Left WP");
+	gui::forceSelectAuton("Left WP");
 	gui::runSelectedAuton();
 }
 
@@ -63,7 +63,6 @@ void opcontrol() {
 	uint32_t lastPrint = 0;
 	pros::Task liftTask(liftControl);
 	pros::Task rollTask([]{autoRoller(color);});
-	pros::Task flipTask(flipperControl);
 
 	while (true) {
 
@@ -113,12 +112,6 @@ void opcontrol() {
 				CT2 = false;
 				CT1 = false;
 			}
-		}
-		if (master.get_digital_new_press(DIGITAL_Y)) {
-			intake.move_voltage(12000);
-		}
-		if (master.get_digital_new_press(DIGITAL_RIGHT)) {
-			intake.move_voltage(-12000);
 		}
 		pros::delay(20);
 	}

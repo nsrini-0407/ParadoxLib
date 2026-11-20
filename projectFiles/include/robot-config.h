@@ -5,10 +5,8 @@ extern pros::MotorGroup leftMotors;
 extern pros::MotorGroup rightMotors;
 extern pros::MotorGroup chassisMotors;
 extern pros::MotorGroup liftMotors;
-extern pros::Motor roller;
-extern pros::Motor flipper;
+extern pros::MotorGroup roller;
 extern pros::Motor claw;
-extern pros::Motor intake;
 
 extern pros::Controller master;
 

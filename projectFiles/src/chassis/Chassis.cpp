@@ -59,7 +59,7 @@ void Chassis::setPose(Pose p) { odom.setPose(p); }
 
 //  Motion framework 
 
-void Chassis::requestMotionStart(bool async, std::function<void()> body) {
+void Chassis::requestMotionStart(bool background, std::function<void()> body) {
     // Only one motion may own the drivetrain. Starting a new one while another
     // runs cancels the old one and waits for its loop to unwind, so two tasks
     // never command the motors at once.
@@ -74,7 +74,7 @@ void Chassis::requestMotionStart(bool async, std::function<void()> body) {
     stallSince = 0;
     motionRunning.store(true);
 
-    if (async) {
+    if (background) {
         // pros::Task heap-copies the callable and frees it when the body
         // returns, so nothing here has to outlive this call.
         pros::Task([this, body] {
@@ -88,23 +88,23 @@ void Chassis::requestMotionStart(bool async, std::function<void()> body) {
 }
 
 void Chassis::endMotion(bool keepMoving) {
-    // Chained motions (minSpeed + earlyExitRange) hand the next motion a robot
+    // Chained motions (speedFloor + handoffRange) hand the next motion a robot
     // that is still rolling; everything else comes to a stop.
     if (!keepMoving) brake();
 }
 
-void Chassis::waitUntilDone() {
+void Chassis::waitForMotion() {
     while (motionRunning.load()) pros::delay(5);
 }
 
-void Chassis::waitUntil(double dist) {
+void Chassis::waitUntilTravelled(double dist) {
     while (motionRunning.load() && distTravelled.load() < dist) pros::delay(5);
 }
 
-void Chassis::cancelMotion() {
+void Chassis::stopMotion() {
     if (!motionRunning.load()) return;
     cancelRequested.store(true);
-    waitUntilDone();
+    waitForMotion();
     cancelRequested.store(false);
 }
 

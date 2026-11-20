@@ -52,7 +52,7 @@ struct ControllerSettings {
 // chassis's configured value, so overriding only kP does not also reset the
 // exit conditions to struct defaults. Applies to that one motion only.
 //
-//   chassis.turnToHeading(90, 1000, {.angular = {.kP = 3, .kD = 25}});
+//   chassis.turnToAngle(90, 1000, {.turnTune = {.kP = 3, .kD = 25}});
 struct ControllerOverride {
     double kP = NAN;
     double kI = NAN;
@@ -96,65 +96,65 @@ struct StallSettings {
 
 // ─── Per-motion options. Everything has a sensible default; override only
 
-struct MoveToPointParams {
-    bool   forwards       = true;   // false = drive to the point in reverse
-    double maxSpeed       = 100;    // percent
-    double minSpeed       = 0;      // chaining: never drop below this, and exit at earlyExitRange
-    double earlyExitRange = 0;      // inches; > 0 exits early WITHOUT braking (momentum carries)
-    ControllerOverride lateral{};   // per-motion PID / exit overrides
-    ControllerOverride angular{};
-    bool   async          = false;
+struct DriveToPointOptions {
+    bool   reverse        = false;  // true = drive to the point backwards
+    double speedCap       = 100;    // percent
+    double speedFloor     = 0;      // chaining: never drop below this, and hand off at handoffRange
+    double handoffRange   = 0;      // inches; > 0 hands off early WITHOUT braking (momentum carries)
+    ControllerOverride driveTune{}; // per-motion PID / exit overrides
+    ControllerOverride turnTune{};
+    bool   background     = false;  // true = start the move and return immediately
 };
 
 // Boomerang controller: arrives at (x, y) already pointing at `theta`. Best
 // for heading changes under ~120 deg. For a full reversal (arrive facing back
-// the way you came) it lands ~1 in / ~4 deg off - do turnToHeading first, or
-// chain a turnToHeading after it.
-struct MoveToPoseParams {
-    bool   forwards        = true;
-    double maxSpeed        = 100;
-    double minSpeed        = 0;
-    double earlyExitRange  = 0;
-    double lead            = 0.6;   // boomerang carrot distance factor, 0..1. Higher = wider arc
-    double horizontalDrift = 2.0;   // cornering aggressiveness: ~2 all-omni, ~8 with traction wheels
-    ControllerOverride lateral{};   // per-motion PID / exit overrides
-    ControllerOverride angular{};
-    bool   async           = false;
+// the way you came) it lands ~1 in / ~4 deg off - do turnToAngle first, or
+// chain a turnToAngle after it.
+struct DriveToPoseOptions {
+    bool   reverse         = false;
+    double speedCap        = 100;
+    double speedFloor      = 0;
+    double handoffRange    = 0;
+    double carrot          = 0.6;   // boomerang carrot distance factor, 0..1. Higher = wider arc
+    double cornerGrip      = 2.0;   // cornering aggressiveness: ~2 all-omni, ~8 with traction wheels
+    ControllerOverride driveTune{}; // per-motion PID / exit overrides
+    ControllerOverride turnTune{};
+    bool   background      = false;
 };
 
-struct TurnToHeadingParams {
-    double maxSpeed       = 100;
-    double minSpeed       = 0;      // floor to beat static friction on the last few degrees
-    double earlyExitRange = 0;      // degrees
-    ControllerOverride angular{};   // per-motion PID / exit overrides
-    bool   async          = false;
+struct TurnToAngleOptions {
+    double speedCap       = 100;
+    double speedFloor     = 0;      // floor to beat static friction on the last few degrees
+    double handoffRange   = 0;      // degrees
+    ControllerOverride turnTune{};  // per-motion PID / exit overrides
+    bool   background     = false;
 };
 
-enum class DriveSide { LEFT, RIGHT };
-enum class TurnDirection { AUTO, CW, CCW };   // AUTO = shortest way
+enum class Pivot { LEFT, RIGHT };            // the side a swing turn pivots around
+enum class Spin { SHORTEST, CW, CCW };
 
 // Swing turn: one side of the drive is held in place and the other side drives,
 // so the robot pivots about the locked wheel instead of its center. Which way
-// the robot moves falls out of the geometry: lock LEFT and turn CW and the
-// right side drives backward; lock LEFT and turn CCW and it drives forward.
-// Use `direction` to force the long way round when you need a specific one.
-struct SwingToHeadingParams {
-    TurnDirection direction = TurnDirection::AUTO;
-    double maxSpeed       = 100;
-    double minSpeed       = 0;
-    double earlyExitRange = 0;      // degrees
-    ControllerOverride angular{};   // per-motion PID / exit overrides
-    bool   async          = false;
+// the robot moves falls out of the geometry: pivot LEFT and turn CW and the
+// right side drives backward; pivot LEFT and turn CCW and it drives forward.
+// Use `spin` to force the long way round when you need a specific one.
+struct SwingToAngleOptions {
+    Spin   spin           = Spin::SHORTEST;
+    double speedCap       = 100;
+    double speedFloor     = 0;
+    double handoffRange   = 0;      // degrees
+    ControllerOverride turnTune{};  // per-motion PID / exit overrides
+    bool   background     = false;
 };
 
-struct MoveDistanceParams {
-    double maxSpeed       = 100;
-    double minSpeed       = 0;
-    double earlyExitRange = 0;
-    double heading        = NAN;    // hold this heading (deg). NAN = hold whatever we start at
-    ControllerOverride lateral{};   // per-motion PID / exit overrides
-    ControllerOverride angular{};
-    bool   async          = false;
+struct DriveDistanceOptions {
+    double speedCap       = 100;
+    double speedFloor     = 0;
+    double handoffRange   = 0;
+    double holdAngle      = NAN;    // hold this heading (deg). NAN = hold whatever we start at
+    ControllerOverride driveTune{}; // per-motion PID / exit overrides
+    ControllerOverride turnTune{};
+    bool   background     = false;
 };
 
 class Chassis {
@@ -174,21 +174,21 @@ class Chassis {
         void setPose(Pose p);
         Pose getPose() const { return odom.getPose(); }
 
-        // Motions (blocking unless params.async)
-        void turnToHeading(double theta, double timeoutMs, TurnToHeadingParams p = {});
-        void swingToHeading(double theta, DriveSide lockedSide, double timeoutMs, SwingToHeadingParams p = {});
-        void moveToPoint(double x, double y, double timeoutMs, MoveToPointParams p = {});
-        void moveToPose(double x, double y, double theta, double timeoutMs, MoveToPoseParams p = {});
-        void moveDistance(double distance, double timeoutMs, MoveDistanceParams p = {});
+        // Motions (blocking unless options.background)
+        void turnToAngle(double theta, double timeoutMs, TurnToAngleOptions o = {});
+        void swingToAngle(double theta, Pivot pivotSide, double timeoutMs, SwingToAngleOptions o = {});
+        void driveToPoint(double x, double y, double timeoutMs, DriveToPointOptions o = {});
+        void driveToPose(double x, double y, double theta, double timeoutMs, DriveToPoseOptions o = {});
+        void driveDistance(double distance, double timeoutMs, DriveDistanceOptions o = {});
 
-        // Async control 
-        void waitUntilDone();
+        // Background-motion control
+        void waitForMotion();
         // Block until the running motion has travelled `dist` (inches for
         // drives, degrees for turns) or finished. Lets you fire an intake
         // partway through a move.
-        void waitUntil(double dist);
-        void cancelMotion();
-        bool isInMotion() const { return motionRunning.load(); }
+        void waitUntilTravelled(double dist);
+        void stopMotion();
+        bool isMoving() const { return motionRunning.load(); }
 
         // Manual drive (percent, -100..100) 
         void tank(double left, double right);
@@ -223,7 +223,7 @@ class Chassis {
 
     private:
         // Motion framework
-        void   requestMotionStart(bool async, std::function<void()> body);
+        void   requestMotionStart(bool background, std::function<void()> body);
         bool   cancelled() const { return cancelRequested.load(); }
         void   endMotion(bool keepMoving);
         // Drive/turn mixer: clamps |turn| to turnCap, desaturates preserving the
