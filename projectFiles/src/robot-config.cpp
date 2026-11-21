@@ -62,15 +62,15 @@ ControllerSettings lateralSettings {
     .smallError        = 0.75,   .smallErrorTimeout = 125,
     .largeError        = 2.5,   .largeErrorTimeout = 450,
     .slew              = 300,   // percent per second. 0 disables the ramp
-    .dFilter           = 0,
+    .dFilter           = 2.35,
 };
 ControllerSettings angularSettings {
-    .kP = 0,  .kI = 0.0,  .kD = 0,
+    .kP = 15,  .kI = 0.0,  .kD = 2.25,
     .windupRange       = 10.0,
     .smallError        = 1.25,   .smallErrorTimeout = 125,
     .largeError        = 3.5,   .largeErrorTimeout = 450,
-    .slew              = 0,
-    .dFilter           = 0 ,
+    .slew              = 150,
+    .dFilter           = 1.15 ,
 };
 
 Chassis chassis(
