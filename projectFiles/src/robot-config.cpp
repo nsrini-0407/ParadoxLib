@@ -3,6 +3,9 @@
 #include "pros/rtos.hpp"
 #include "pros/imu.hpp"
 
+#include <cmath>
+#include <algorithm>
+
 
 //Motors and sensors
 pros::Controller master(pros::E_CONTROLLER_MASTER);
@@ -20,6 +23,10 @@ pros::Rotation rightRotation(6);
 pros::Rotation backRotation(20);
 pros::Rotation liftRotation(8);
 pros::Optical optical(18);
+
+pros::Distance sideFrontDist(12);
+pros::Distance sideRearDist(13);
+pros::Distance backDist(14);
 
 TrackingWheel leftWheel (&leftRotation,  2, -1.625,  1.0, true);
 TrackingWheel rightWheel(&rightRotation, 2, +1.625,  1.0, true);
@@ -41,6 +48,14 @@ std::string color;
 double redHue = 20;
 double blueHue = 210;
 bool runTip = true;
+
+
+constexpr double SIDE_SENSOR_DIR = -90.0;   // -90 left, +90 right
+constexpr double BACK_SENSOR_DIR = 180.0;
+constexpr double MAX_CORRECTION  = 6.0;
+constexpr double MAX_SKEW_DEG    = 15.0;
+constexpr double SIDE_AGREE_IN   = 1.5;
+constexpr int    SAMPLES         = 5;
 
 
 //Odom configuration settings
@@ -166,4 +181,69 @@ void moveLift(int targetLevel) { //accepts the number of levels to move up/down 
 		liftMotors.brake();
 		claw.set_value(true);
 		pros::delay(200);
+    }
+
+        
+    // Distance Sensor Resets
+    static double degToRad(double d) { return d * M_PI / 180.0; }
+
+    static void readWalls(double& sideF, double& sideR, double& back) {
+        pros::Distance* s[3] = {&sideFrontDist, &sideRearDist, &backDist};
+        double sum[3] = {0, 0, 0};
+        int n[3] = {0, 0, 0};
+        for (int i = 0; i < SAMPLES; i++) {
+            for (int j = 0; j < 3; j++) {
+                const int mm = s[j]->get_distance();
+                if (mm > 20 && mm < 2000) { sum[j] += mm; n[j]++; }
+            }
+            pros::delay(35);
+        }
+        auto avg = [&](int j) { return n[j] > SAMPLES / 2 ? sum[j] / n[j] / 25.4 : NAN; };
+        sideF = avg(0); sideR = avg(1); back = avg(2);
+    }
+
+    static bool correctFromWall(double& x, double& y, double theta, double sensorDir,
+                                double measured, double expected, const char* name) {
+        if (expected <= 0 || !std::isfinite(measured)) return false;
+        const double beam = theta + sensorDir;
+        const long   wall = std::lround(beam / 90.0);
+        const double skew = beam - wall * 90.0;
+        if (std::fabs(skew) > MAX_SKEW_DEG) return false;
+        const double err = measured * std::cos(degToRad(skew)) - expected;
+        if (std::fabs(err) > MAX_CORRECTION) return false;
+        switch (((wall % 4) + 4) % 4) {
+            case 0: y -= err; break;
+            case 1: x -= err; break;
+            case 2: y += err; break;
+            case 3: x += err; break;
+        }
+        printf("[recal] %s: read %.2f, expected %.2f, shift %.2f\n", name, measured, expected, err);
+        return true;
+    }
+
+    // pass 0 to skip a sensor
+    bool recalibrateOdom(double expectedSide, double expectedBack) {
+        double sideF, sideR, back;
+        readWalls(sideF, sideR, back);
+
+        double side = NAN;
+        if (std::isfinite(sideF) && std::isfinite(sideR))
+            side = std::fabs(sideF - sideR) <= SIDE_AGREE_IN ? (sideF + sideR) / 2.0 : std::max(sideF, sideR);
+        else if (std::isfinite(sideF)) side = sideF;
+        else if (std::isfinite(sideR)) side = sideR;
+
+        const Pose p = chassis.getPose();
+        double x = p.x, y = p.y;
+        const bool s = correctFromWall(x, y, p.theta, SIDE_SENSOR_DIR, side, expectedSide, "side");
+        const bool b = correctFromWall(x, y, p.theta, BACK_SENSOR_DIR, back, expectedBack, "back");
+
+        if (s || b) chassis.setPose(x, y, p.theta);
+        printf("[recal] (%.2f, %.2f) -> (%.2f, %.2f)\n", p.x, p.y, x, y);
+        return s || b;
+    }
+
+    void printWallReadings() {
+        double f, r, b;
+        readWalls(f, r, b);
+        printf("[recal] sideF %.2f  sideR %.2f  back %.2f\n", f, r, b);
     }
