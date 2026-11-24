@@ -57,20 +57,20 @@ const double DOWN = 0;
 
 //Odom configuration settings
 ControllerSettings lateralSettings {
-    .kP = 20,  .kI = 0,  .kD = 3.25,
+    .kP = 31,  .kI = 0,  .kD = 7.75,
     .windupRange       = 3.0,
-    .smallError        = 0.75,   .smallErrorTimeout = 125,
-    .largeError        = 2.5,   .largeErrorTimeout = 450,
-    .slew              = 300,   // percent per second. 0 disables the ramp
-    .dFilter           = 2.35,
+    .smallError        = 0.5,   .smallErrorTimeout = 125,
+    .largeError        = 2,   .largeErrorTimeout = 450,
+    .slew              = 400,   // percent per second. 0 disables the ramp
+    .dFilter           = 0.6,
 };
 ControllerSettings angularSettings {
-    .kP = 15,  .kI = 0.0,  .kD = 2.25,
+    .kP = 0,  .kI = 0.0,  .kD = 0,
     .windupRange       = 10.0,
     .smallError        = 1.25,   .smallErrorTimeout = 125,
     .largeError        = 3.5,   .largeErrorTimeout = 450,
     .slew              = 150,
-    .dFilter           = 1.15 ,
+    .dFilter           = 0.6 ,
 };
 
 Chassis chassis(

@@ -1,5 +1,6 @@
 #include "main.h"
 #include "autonomous.hpp"
+#include "pros/device.hpp"
 #include "pros/rtos.hpp"
 #include <cstdio>
 
@@ -83,7 +84,10 @@ void leftAuton(Chassis& chassis) {
 	// liftMotors.brake();
 	// claw.brake();
 	chassis.setPose(0, 0, 0);
-	chassis.driveToPoint(0, 24, 10000);
+	pros::delay(500);
+	chassis.driveToPoint(0, 12, 10000);
+	chassis.driveToPoint(0, 36, 10000);
+
 }
 
 // Same route mirrored (x negated) so it runs from the other starting tile.

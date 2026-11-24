@@ -3,7 +3,7 @@
 #include "81yOdom/utils/math.hpp"
 #include <cmath>
 
-//  Shared helpers 
+//  Shared helpers
 
 namespace {
 
@@ -70,7 +70,9 @@ void Chassis::turnToAngle(double theta, double timeoutMs, TurnToAngleOptions o) 
             // Floor to beat static friction - but only while there is real
             // error left. Applied inside the settle band it flips sign every
             // time error crosses zero and the robot buzzes instead of stopping.
-            if (std::fabs(error) > ang.smallError && std::fabs(out) < o.speedFloor) {
+            // Also only when the output is not opposing the error: if D has
+            // pushed the output against the error, that is braking - leave it.
+            if (std::fabs(error) > ang.smallError && std::fabs(out) < o.speedFloor && out * error >= 0) {
                 out = o.speedFloor * sign(error);
             }
             prevOut = out;
@@ -147,8 +149,8 @@ void Chassis::swingToAngle(double theta, Pivot pivotSide, double timeoutMs, Swin
             out = slew(out, prevOut, ang.slew, dt);
 
             // Same static-friction floor as turnToAngle, same reason for
-            // keeping it out of the settle band.
-            if (std::fabs(error) > ang.smallError && std::fabs(out) < o.speedFloor) {
+            // keeping it out of the settle band and for not fighting braking.
+            if (std::fabs(error) > ang.smallError && std::fabs(out) < o.speedFloor && out * error >= 0) {
                 out = o.speedFloor * sign(error);
             }
             prevOut = out;
@@ -240,7 +242,7 @@ void Chassis::driveToPoint(double x, double y, double timeoutMs, DriveToPointOpt
     });
 }
 
-//  driveToPose (boomerang) 
+//  driveToPose (boomerang)
 //
 // Drive toward a "carrot" placed `carrot * distance` behind the target along the
 // target heading. As the robot closes in, the carrot slides onto the target and
@@ -349,7 +351,7 @@ void Chassis::driveToPose(double x, double y, double theta, double timeoutMs, Dr
     });
 }
 
-//  driveDistance 
+//  driveDistance
 //
 // Drive a signed distance along a fixed heading, holding that heading.
 // Progress is the displacement PROJECTED onto the heading - never a raw
@@ -395,7 +397,7 @@ void Chassis::driveDistance(double distance, double timeoutMs, DriveDistanceOpti
             double lateralRaw = clamp(lateralPID.update(error, dt), -o.speedCap, o.speedCap);
             double angularOut = clamp(angularPID.update(angularError, dt), -o.speedCap, o.speedCap);
 
-            if (std::fabs(error) > lat.smallError && std::fabs(lateralRaw) < o.speedFloor) {
+            if (std::fabs(error) > lat.smallError && std::fabs(lateralRaw) < o.speedFloor && lateralRaw * error >= 0) {
                 lateralRaw = o.speedFloor * sign(error);
             }
 

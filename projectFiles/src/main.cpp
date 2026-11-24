@@ -68,7 +68,7 @@ void opcontrol() {
 
 		//arcade driving 
 		const double throttle = master.get_analog(ANALOG_LEFT_Y)  * (100.0 / 127.0);
-		const double turn     = master.get_analog(ANALOG_RIGHT_X) * (100.0 / 127.0);
+		const double turn     = -1 * master.get_analog(ANALOG_RIGHT_X) * (100.0 / 127.0);
 		chassis.arcade(throttle, turn);
 
 		if (pros::millis() - lastPrint >= 500) {
